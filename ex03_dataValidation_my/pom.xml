@@ -140,12 +140,13 @@
 			<version>${org.springframework-version}</version>
 			<scope>test</scope>
 		</dependency>
-
+	
+		<!-- hibernate-validator 버전 8.0.2쓰니까 버전이 안맞는지 안됨. -->
 		<!-- https://mvnrepository.com/artifact/org.hibernate.validator/hibernate-validator -->
 		<dependency>
 			<groupId>org.hibernate.validator</groupId>
 			<artifactId>hibernate-validator</artifactId>
-			<version>8.0.2.Final</version>
+			<version>6.1.5.Final</version>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/javax.validation/validation-api -->
