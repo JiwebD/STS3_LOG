@@ -26,6 +26,12 @@ class DataSourceTestes {
 	private DataSource dataSource1;
 	
 	@Autowired
+	private DataSource dataSource2;
+	
+	@Autowired
+	private DataSource dataSource3;
+	
+	@Autowired
 	private MemoDaoImpl memoDaoImpl;
 	
 	@Test
@@ -38,9 +44,28 @@ class DataSourceTestes {
 	}
 	
 	@Test
+	@Disabled
 	void test2() throws Exception {
 		memoDaoImpl.insert(new MemoDto(2,"b","c", LocalDateTime.now(),null));
 
 	}
+	
+	@Test
+	@Disabled
+	void test3() throws Exception {
+		System.out.println(dataSource2);
+		Connection con = dataSource2.getConnection();
+		PreparedStatement pstmt = con.prepareStatement("insert into tbl_book values(3,3,'aaa','bbb','ccc','a')");
+		pstmt.executeUpdate();
+	}
+	
+	@Test
+	void test4() throws Exception {
+		System.out.println(dataSource3);
+		Connection con = dataSource3.getConnection();
+		PreparedStatement pstmt = con.prepareStatement("insert into tbl_book values(4,4,'aaa','bbb','ccc','a')");
+		pstmt.executeUpdate();
+	}
+		
 
 }
