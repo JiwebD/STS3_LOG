@@ -1,0 +1,75 @@
+✅ 정리 목차 구성
+🧱 Part 1: SECURITY 기본 설정
+Step 1: 의존성 추가 (core, web, config, taglibs)
+
+Step 2: SecurityConfig.java 기본 구조 만들기 (권한, 로그인/로그아웃 설정)
+
+Step 3: web.xml에 Security Filter 등록
+
+Step 4: CSRF 설정 및 403 테스트
+
+Step 5: 사용자 역할별 접근 제어 (/user, /manager, /admin)
+
+Step 6: JSP 페이지 연동 및 로그인 테스트
+
+
+
+✅ Part 2: SECURITY DB 연결 (수정된 정리 목차)
+🔹 Step 7: UserDto, UserMapper, UserServiceImpl 구성 및 사용자 정보 DB 저장
+유저 정보를 담는 DTO 클래스 생성
+
+Mapper를 통한 insert 처리
+
+서비스에서 비밀번호 암호화 및 기본 권한 설정
+
+🔹 Step 8: 사용자 정의 PrincipalDetails, PrincipalDetailsService 구현
+인증된 사용자 객체를 직접 구현
+
+DB에서 사용자 조회하여 Spring Security에 전달
+
+🔹 Step 9: SecurityConfig에서 DB 기반 인증 방식 설정
+기존 inMemory 방식 제거
+
+PrincipalDetailsService + PasswordEncoder로 설정
+
+🔹 Step 10: 회원가입 페이지 구현 및 로그인 처리
+join.jsp, UserController, UserServiceImpl 연동
+
+회원가입 시 ROLE_USER 자동 설정
+
+🔹 Step 11: 로그인 사용자 정보 확인하는 방법 3가지
+Authentication 객체
+
+@AuthenticationPrincipal 어노테이션
+
+SecurityContextHolder 직접 접근
+
+🔹 Step 12: 로그인 사용자 정보 JSP에서 출력하기 (<sec:authentication> 태그 사용)
+Spring Security 태그라이브러리 적용
+
+로그인 정보 출력 및 조건부 렌더링 (로그인/비로그인 상태)
+
+🧱 Part 3: SECURITY 커스텀 핸들러
+Step 13: 인증되지 않은 사용자 접근 시 예외 처리 (AuthenticationEntryPoint)
+
+Step 14: 권한 부족시 예외 처리 (AccessDeniedHandler)
+
+Step 15: 로그인 성공 핸들러
+
+Step 16: 로그인 실패 핸들러
+
+Step 17: 로그아웃 핸들러
+
+Step 18: 로그아웃 성공 핸들러
+
+🧱 Part 4: Remember-Me
+Step 19: remember-me 파라미터 및 form 구성
+
+Step 20: JDBC 기반 TokenRepository 설정
+
+Step 21: persistent_logins 테이블 생성 및 자동 저장 확인
+
+Step 22: Remember-Me 상태 유지 확인 및 로그아웃 시 토큰 제거
+
+
+

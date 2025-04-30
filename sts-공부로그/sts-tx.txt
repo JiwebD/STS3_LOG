@@ -1,0 +1,322 @@
+sts_ tx 공부
+
+ 의존성 설정
+
+maven reposigory
+spring-tx 검색
+6.2.6버전 
+<!-- https://mvnrepository.com/artifact/org.springframework/spring-tx -->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-tx</artifactId>
+    <version>6.2.6</version>
+</dependency>
+
+pom.xml에 붙여넣기
+
+
+변경
+<!-- https://mvnrepository.com/artifact/org.springframework/spring-tx -->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-tx</artifactId>
+    <version>${org.springframework-version}</version>
+</dependency>
+
+
+maven dependencies에서 spring-tx 설치된거 확인하고 업데이트 프로젝트 하기
+
+
+
+
+-----------------------------------------
+TxConfig 
+-----------------------------------------
+/ex07_tx/src/main/java/com/example/app/config/TxConfig.java
+만들기
+
+@Configuration
+@EnableTransactionManagement
+public class TxConfig {
+
+	@Autowired
+	private DataSource dataSource3;
+	
+	//mybatis에서 사용하는 트렌젝션    jpa는 따로 만들어야한다고한다.
+    @Bean
+    public DataSourceTransactionManager transactionManager() {
+        return new DataSourceTransactionManager(dataSource3);
+    }
+    
+    
+    
+}
+
+//설명
+//@EnableTransactionManagement  트랜잭션 관리를 활성화
+//이 어노테이션을 사용하면 스프링은 @Transactional 어노테이션이 붙은 메서드나 클래스의 트랜잭션을 자동으로 관리
+//@EnableTransactionManagement는 내부적으로 AOP(Aspect-Oriented Programming)을 사용하여 트랜잭션 관련 기능을 구현
+
+
+
+
+
+
+-----------------------------------------
+<<MemoServiceImpl>>
+-----------------------------------------
+package com.example.app.domain.service;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+
+import com.example.app.domain.dto.MemoDto;
+import com.example.app.domain.mapper.MemoMapper;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@Slf4j
+public class MemoServiceImpl {
+	
+//	@Autowired
+//	private MemoDaoImpl memoDaoImpl;
+//	
+//	public boolean registrationMemo(MemoDto memoDto) throws SQLException {
+//		
+//		int result = memoDaoImpl.insert(memoDto);
+//		
+//		return result>0;
+//	}
+	
+	
+//	public boolean registrationMemo(MemoDto memoDto) throws SQLException {
+//		int result = memoMapper.insert(memoDto);
+//		
+//		return result>0;
+//	}
+	
+	
+	@Autowired
+	private MemoMapper memoMapper;
+	
+	
+	//전체메모가져오기
+	public List<MemoDto> getAllMemo(){
+		log.info("MemoService's getAllMemo Call! ");
+		return  memoMapper.selectAll(); 
+	}
+	
+	
+	//메모작성 
+//	@Transactional(rollbackFor = Exception.class) 
+	public void addMemoTx(MemoDto dto)	 {
+		log.info("MemoService's addMemoTx Call! ");
+		int id=dto.getId();
+		memoMapper.insert(dto);	//01 정상INSERT 
+		dto.setId(id);		//PK오류 발생예정인 dto
+		memoMapper.insert(dto);	//02	PK오류 발생!!		
+	}
+}
+
+
+
+junit 으로 테스트해보기
+------------------------------------
+1. 
+MemoServiceImpl에 @Transactional(rollbackFor = Exception.class)  을 사용 안하면
+오류발생 후 rollback이 안됨  => tbl_memo에 1행 남아있음
+--------------------------------
+
+
+	//메모작성 
+//	@Transactional(rollbackFor = Exception.class)  
+	public void addMemoTx(MemoDto dto)	 {
+		log.info("MemoService's addMemoTx Call! ");
+		int id=dto.getId();
+		memoMapper.insert(dto);	//01 정상INSERT 
+		dto.setId(id);		//PK오류 발생예정인 dto
+		memoMapper.insert(dto);	//02	PK오류 발생!!		
+	}
+
+
+
+package TxTests;
+
+import java.time.LocalDateTime;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import com.example.app.domain.dto.MemoDto;
+import com.example.app.domain.service.MemoServiceImpl;
+
+
+@ExtendWith(SpringExtension.class)	
+@ContextConfiguration("file:src/main/webapp/WEB-INF/spring/root-context.xml") 
+class TxTests {
+
+	
+	@Autowired
+	private MemoServiceImpl memoService;
+	
+	@Test
+	void t1() {
+		memoService.addMemoTx(new MemoDto(9090,"a","a",LocalDateTime.now()));
+	}
+
+}
+
+
+
+오류발생
+org.springframework.dao.DuplicateKeyException: 
+### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry '9090' for key 'tbl_memo.PRIMARY'
+### The error may exist in com/example/app/domain/mapper/MemoMapper.java (best guess)
+### The error may involve com.example.app.domain.mapper.MemoMapper.insert-Inline
+### The error occurred while setting parameters
+### SQL: insert into tbl_memo values(?,?,?,?)
+### Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry '9090' for key 'tbl_memo.PRIMARY'
+
+
+
+
+junit 으로 테스트해보기
+------------------------------------
+2. 
+MemoServiceImpl에 @Transactional(rollbackFor = Exception.class)  을 사용
+오류발생 후 rollback 됨.
+--------------------------------
+
+
+	//메모작성 
+	@Transactional(rollbackFor = Exception.class)  
+	public void addMemoTx(MemoDto dto)	 {
+		log.info("MemoService's addMemoTx Call! ");
+		int id=dto.getId();
+		memoMapper.insert(dto);	//01 정상INSERT 
+		dto.setId(id);		//PK오류 발생예정인 dto
+		memoMapper.insert(dto);	//02	PK오류 발생!!		
+	}
+
+
+
+package TxTests;
+
+import java.time.LocalDateTime;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+
+import com.example.app.domain.dto.MemoDto;
+import com.example.app.domain.service.MemoServiceImpl;
+
+
+@ExtendWith(SpringExtension.class)	
+@ContextConfiguration("file:src/main/webapp/WEB-INF/spring/root-context.xml") 
+class TxTests {
+
+	
+	@Autowired
+	private MemoServiceImpl memoService;
+	
+	@Test
+	void t1() {
+		memoService.addMemoTx(new MemoDto(9090,"a","a",LocalDateTime.now()));
+	}
+
+}
+
+
+
+오류발생
+org.springframework.dao.DuplicateKeyException: 
+### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry '9090' for key 'tbl_memo.PRIMARY'
+### The error may exist in com/example/app/domain/mapper/MemoMapper.java (best guess)
+### The error may involve com.example.app.domain.mapper.MemoMapper.insert-Inline
+### The error occurred while setting parameters
+### SQL: insert into tbl_memo values(?,?,?,?)
+### Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry '9090' for key 'tbl_memo.PRIMARY'
+
+
+
+개념
+TRANSCTION 정의
+ DB의 상태를 변경시키는 작업의 단위
+
+ACID
+Atomicity (원자성)
+트랜잭션이 DB에 모두 반영되거나, 혹은 전혀 반영되지 않아야 된다 (All or Nothing).
+
+Consistenty (일관성)
+트랜잭션의 작업 처리 결과는 항상 일관성 있어야 한다.
+
+시스템이 가지고 있는 고정 요소는 트랜잭션 수행 전과 수행 후의 상태가 같아야 한다는 말로,
+
+DB의 제약조건을 위배하는 작업을 트랜잭션 과정에서 수행할 수 없음을 나타낸다.
+
+ex) 송금 시 금액의 데이터 타입을 정수형(integer)에서 문자열(string)로 변경할 수 없음.
+
+Isolation (독립성)
+둘 이상의 트랜잭션이 동시에 병행 실행되고 있을 때, 어떤 트랜잭션도 다른 트랜잭션 연산에 끼어들 수 없다.
+
+Durability (지속성)
+트랜잭션이 성공적으로 완료되었으면, 결과는 영구적으로 반영되어야 한다.
+
+
+TRANSACTION 연산
+(1) COMMIT 연산
+트랜잭션이 성공적으로 수행되었음을 선언하는 연산으로,
+
+COMMIT ****연산의 실행을 통해 트랜잭션의 수행이 성공적으로 완료되었음을 선언하고, 그 결과를 최종 DB에 반영한다.
+
+(2) ROLLBACK 연산
+트랜잭션 수행이 실패했음을 선언하고 작업을 취소하는 연산으로,
+
+트랜잭션이 수행되는 도중 일부 연산이 처리되지 못한 상황이라면 ROLLBACK 연산을 실행하여 트랜잭션 수행이 실패했음을 선언하고, DB를 트랜잭션 수행 전과 일관된 상태로 되돌려야 한다.
+
+
+TRANSACTION 상태
+
+Active
+트랜잭션 활동 상태
+
+트랜잭션이 실행 중이며 동작 중인 상태를 말한다.
+
+Partially Committed
+트랜잭션의 COMMIT 명령이 도착한 상태
+
+트랜잭션의 COMMIT 이전 SQL문이 수행되고, COMMIT 만 남은 상태를 말한다.
+
+(트랜잭션의 마지막 연산까지 실행하고 COMMIT 연산을 실행하기 직전의 상태)
+
+Failed
+트랜잭션 실패 상태
+
+더이상 트랜잭션이 정상적으로 진행될 수 없는 상태를 말한다.
+
+Committed
+트랜잭션 완료 상태
+
+트랜잭션이 정상적으로 완료된 상태를 말한다.
+
+Aborted
+트랜잭션 취소 상태
+
+트랜잭션이 취소되고, 트랜잭션 실행 이전 데이터로 돌아간 상태를 말한다.
+(트랜잭션 수행을 실패하고 ROLLBACK 연산을 실행한 상태)
+
+
+
+
+

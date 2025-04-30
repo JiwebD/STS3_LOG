@@ -1,0 +1,1166 @@
+restController
+
+내가 정리내용 보여달라고 할때만 보여주고 안물어보면 정리해놓고있어줘
+sts @RestController 공부 시작
+
+@Controller , @RestController  비교 참고 사이트 참고해서 정리해주면 좋겠어
+https://velog.io/@dyunge_100/Spring-Controller%EC%99%80-RestController%EC%9D%98-%EC%B0%A8%EC%9D%B4
+
+
+
+@RestController(BACKEND-SPRING)
+RESTful 웹 서비스를 제공하는 컨트롤러
+	REST : REpresentative State Transfer의 약자로 분산 시스템을 위한 아키텍처
+	네트워크를 경유해서 외부 서버에 접속하거나 필요한 정보를 불러오기 위한 구조
+	그리고 이 REST 개념을 바탕으로 설계된 시스템을 'RESTFul'이라고 표현
+메서드의 반환 값이 JSON, XML 등과 같은 데이터로 처리
+@Controller + @ResponseBody 형태
+
+
+비동기요청함수(FRONTEND-JAVASCRIPT)
+종류
+XMLHttpRequest (XHR):
+  연도: 1999년
+  설명: Microsoft의 인터넷 익스플로러 5에서 처음 등장한 기술로, 웹 페이지에서 비동기적으로 데이터를 받아오는 데 사용됩니다.
+Promise:
+  연도: 2015년 (ECMAScript 2015, 일명 ES6)
+  설명: Promise는 비동기 작업의 결과를 다루기 위한 객체로, 콜백 헬(callback hell)을 해결하고 코드를 보다 깔끔하게 작성할 수 있도록 도와줍니다.
+Fetch API:
+  연도: 2015년 (ECMAScript 2015, 일명 ES6)
+  설명: Fetch API는 네트워크 요청을 생성 및 조작하기 위한 간단한 인터페이스를 제공합니다. XHR보다 더 간결하고 유연한 API를 제공하며 Promise를 사용하여 비동기 작업을 처리합니다.
+Axios:
+  연도: 2014년
+  설명: Axios는 HTTP 클라이언트 라이브러리로, 브라우저 및 Node.js 환경에서 모두 사용할 수 있습니다. Promise 기반의 API를 제공하며,
+  특히 간편한 인터셉터(interceptors), CSRF 보호, JSON 데이터 자동 직렬화 등을 제공하여 개발자들에게 매우 편리한 HTTP 요청 처리 방법을 제공합니다.
+
+
+
+---------------------------------------
+의존성 pom.xml
+---------------------------------------
+maven repository에서 jackson검색
+
+Jackson Databind » 2.19.0
+
+pom.xml에 붙여넣기
+
+<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+<dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>
+    <artifactId>jackson-databind</artifactId>
+    <version>2.19.0</version>
+</dependency>
+
+
+Jackson Dataformat XML » 2.19.0
+
+pom.xml에 붙여넣기
+
+<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.dataformat/jackson-dataformat-xml -->
+<dependency>
+    <groupId>com.fasterxml.jackson.dataformat</groupId>
+    <artifactId>jackson-dataformat-xml</artifactId>
+    <version>2.19.0</version>
+</dependency>
+
+
+
+Jackson Datatype: JSR310 » 2.19.0   이거 설치안하면 데이터타입 에러남 LocaldateTime같은애들
+
+pom.xml에 붙여넣기
+
+<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310 -->
+<dependency>
+    <groupId>com.fasterxml.jackson.datatype</groupId>
+    <artifactId>jackson-datatype-jsr310</artifactId>
+    <version>2.19.0</version>
+</dependency>
+
+
+Update Project 하기
+
+
+
+---------------------------------------
+ 컨트롤러 RestController_01 만들기
+---------------------------------------
+/ex08_restController/src/main/java/com/example/app/restController/RestController_01.java
+만들기
+
+
+
+
+
+
+
+---------------------------------------
+servlet-context.xml  컴포넌트스캔
+---------------------------------------
+/ex08_restController/src/main/webapp/WEB-INF/spring/appServlet/servlet-context.xml
+
+
+<!--  -->
+<context:component-scan base-package="com.example.app.restController" /> 
+
+
+
+
+
+---------------------------------------
+ 컨트롤러 RestController_01 코드 구성
+---------------------------------------
+
+package com.example.app.restController;
+
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import lombok.extern.slf4j.Slf4j;
+
+@RestController
+@Slf4j
+@RequestMapping("/rest")
+public class RestController_01 {
+
+	@GetMapping(value="/getText" , produces=MediaType.TEXT_PLAIN_VALUE)
+	public String f1() {
+		log.info("GET /rest/getText...");
+		return "HELLO WORLD";
+	}
+}
+
+실행 후 
+
+http://localhost:8090/app/rest/getText
+
+HELLO WORLD
+
+Network에서
+Response Headers
+content-type:
+text/plain;charset=ISO-8859-1
+확인
+
+
+
+---------------------------------------
+
+	@GetMapping(value="/getJson" , produces=MediaType.APPLICATION_JSON_UTF8_VALUE)
+	public MemoDto f2() {
+		log.info("GET /rest/getJson...");
+		return new MemoDto(11,"ABCD","FFFF",LocalDateTime.now());
+	}
+
+
+실행 후 
+http://localhost:8090/app/rest/getJson
+
+{
+  "id": 11,
+  "text": "ABCD",
+  "writer": "FFFF",
+  "createAt": [2025, 4, 28, 10, 44, 14, 762055500]
+}
+
+
+Network에서
+Response Headers
+content-type:
+application/json;charset=UTF-8
+확인
+
+
+---------------------------------------
+
+	@GetMapping(value="/getXml" , produces=MediaType.APPLICATION_XML_VALUE)
+	public MemoDto f3() {
+		log.info("GET /rest/getXml...");
+		return new MemoDto(11,"ABCD","FFFF",LocalDateTime.now());
+	}
+
+
+
+실행 후 
+http://localhost:8090/app/rest/getXml
+
+This XML file does not appear to have any style information associated with it. The document tree is shown below.
+<MemoDto>
+<id>11</id>
+<text>ABCD</text>
+<writer>FFFF</writer>
+<createAt>2025</createAt>
+<createAt>4</createAt>
+<createAt>28</createAt>
+<createAt>10</createAt>
+<createAt>44</createAt>
+<createAt>22</createAt>
+<createAt>235850900</createAt>
+</MemoDto>
+
+
+Network에서
+Response Headers
+content-type:
+application/xml;charset=UTF-8
+확인
+
+
+---------------------------------------
+
+	@GetMapping(value="/getXmlList" , produces=MediaType.APPLICATION_XML_VALUE)
+	public List<MemoDto> f4(){
+		log.info("GET /rest/getXmlList...");
+		List<MemoDto> list = new ArrayList();
+		for(int i=0; i<50; i++) {
+			list.add(new MemoDto(i,"A"+i, "aa", LocalDateTime.now()));
+		}
+		return list;
+	}
+
+
+실행 후 
+http://localhost:8090/app/rest/getXmlList
+
+
+This XML file does not appear to have any style information associated with it. The document tree is shown below.
+<List>
+<item>
+<id>0</id>
+<text>A0</text>
+<writer>aa</writer>
+<createAt>2025</createAt>
+<createAt>4</createAt>
+<createAt>28</createAt>
+<createAt>10</createAt>
+<createAt>48</createAt>
+<createAt>46</createAt>
+<createAt>757804100</createAt>
+</item>
+
+.
+.
+.
+.
+
+
+
+Network에서
+Response Headers
+content-type:
+application/xml;charset=UTF-8
+확인
+
+
+---------------------------------------
+
+	@GetMapping(value="/getXmlList2/{show}" , produces=MediaType.APPLICATION_XML_VALUE)
+	public  ResponseEntity< List<MemoDto> > f5(@PathVariable("show") boolean show) {
+		log.info("GET /rest/getXmlList2...");
+		
+		if(show) {
+			List<MemoDto> list = new ArrayList();
+			for(int i=0;i<50;i++) {
+				list.add(new MemoDto(i,"A"+i, "aa", LocalDateTime.now()));
+			}
+			return ResponseEntity.status(HttpStatus.OK).body(list);
+		}	
+		return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(null);	
+	}
+
+
+실행 후 
+http://localhost:8090/app/rest/getXmlList2/true
+
+
+This XML file does not appear to have any style information associated with it. The document tree is shown below.
+<List>
+<item>
+<id>0</id>
+<text>A0</text>
+<writer>aa</writer>
+<createAt>2025</createAt>
+<createAt>4</createAt>
+<createAt>28</createAt>
+<createAt>10</createAt>
+<createAt>56</createAt>
+<createAt>19</createAt>
+<createAt>126071600</createAt>
+</item>
+
+.
+.
+.
+.
+
+
+Network에서
+Response Headers
+content-type:
+application/xml;charset=UTF-8
+확인
+
+
+http://localhost:8090/app/rest/getXmlList2/false 
+
+페이지가 작동하지 않습니다.
+
+
+
+
+---------------------------
+HomeController 테스트
+---------------------------
+package com.example.app.controller;
+
+
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Handles requests for the application home page.
+ */
+@Controller
+@Slf4j //직접 Logger 인스턴스를 만들 필요 없이 log.info(), log.error() 같은 로그 메서드를 바로 사용할 수 있게 해 줌.
+public class HomeController {
+	
+	
+	private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
+	
+	/**
+	 * Simply selects the home view to render by returning its name.
+	 */
+	@RequestMapping(value = "/", method = RequestMethod.GET)
+	public String home(Locale locale, Model model) {
+//		logger.info("Welcome home! The client locale is {}.", locale);
+		
+		
+//		로그레벨 
+//		로그 레벨(Log Level)은 로그 메시지의 중요도를 나타내는 수준을 의미한다. 로그 레벨은 로깅 시스템에서 
+//		사용되며, 로그 메시지의 중요도에 따라 해당 메시지를 기록할지 결정하는 데 사용된다.
+		 		
+		log.trace("TRACE LOG TEST");
+		log.debug("DEBUG LOG TEST");
+		log.info("INFO LOG TEST");
+		log.warn("WARN LOG TEST");
+		log.error("ERROR LOG TEST");
+		
+		Date date = new Date();
+		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
+		
+		String formattedDate = dateFormat.format(date);
+		
+		model.addAttribute("serverTime", formattedDate );
+		
+		return "home";
+	}
+	
+	
+	@GetMapping("/home/test")
+	@ResponseBody
+	public String test() {
+		
+		return "{\"message\":\"REST DATA TEST\"}";
+	}
+	
+}
+
+
+실행 후 
+
+http://localhost:8090/app/home/test 
+
+{"message":"REST DATA TEST"}
+
+Network에서
+Response Headers
+content-type:
+text/html;charset=ISO-8859-1
+확인
+
+
+
+
+--------------------------------------
+MemoServiceImpl.java
+--------------------------------------
+/ex08_restController/src/main/java/com/example/app/domain/service/MemoServiceImpl.java
+
+package com.example.app.domain.service;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.app.domain.dto.MemoDto;
+import com.example.app.domain.mapper.MemoMapper;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@Slf4j
+public class MemoServiceImpl {
+	
+//	@Autowired
+//	private MemoDaoImpl memoDaoImpl;
+//	
+//	public boolean registrationMemo(MemoDto memoDto) throws SQLException {
+//		
+//		int result = memoDaoImpl.insert(memoDto);
+//		
+//		return result>0;
+//	}
+	
+	
+	public boolean registrationMemo(MemoDto memoDto) throws SQLException {
+		int result = memoMapper.insert(memoDto);
+		
+		return result>0;
+	}
+	
+	
+	@Autowired
+	private MemoMapper memoMapper;
+	
+	
+	//전체메모가져오기
+	public List<MemoDto> getAllMemo(){
+		log.info("MemoService's getAllMemo Call! ");
+		return  memoMapper.selectAll(); 
+	}
+	
+	
+	//메모작성 
+	@Transactional(rollbackFor = Exception.class) 
+	public void addMemoTx(MemoDto dto)	 {
+		log.info("MemoService's addMemoTx Call! ");
+		int id=dto.getId();
+		memoMapper.insert(dto);	//01 정상INSERT 
+		dto.setId(id);		//PK오류 발생예정인 dto
+		memoMapper.insert(dto);	//02	PK오류 발생!!		
+	}
+
+
+	@Transactional(rollbackFor = Exception.class)
+	public MemoDto getMemo(int id) {
+		return memoMapper.selectAt(id);
+	}
+
+	@Transactional(rollbackFor = Exception.class)
+	public void modifyMemo(MemoDto dto) {
+		memoMapper.update(dto);
+		
+	}
+
+	@Transactional(rollbackFor = Exception.class)
+	public void removeMemo(int id) {
+		memoMapper.delete(id);
+		
+	}
+	
+	
+}
+
+
+
+
+--------------------------------------
+MemoRestController.java
+--------------------------------------
+/ex08_restController/src/main/java/com/example/app/restController/MemoRestController.java
+
+
+package com.example.app.restController;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.app.domain.dto.MemoDto;
+import com.example.app.domain.service.MemoServiceImpl;
+
+import lombok.extern.slf4j.Slf4j;
+
+@RestController
+@Slf4j
+@RequestMapping("/rest/memo")
+public class MemoRestController {
+
+	@Autowired
+	private MemoServiceImpl memoService;
+
+	// 메모확인전체
+	@GetMapping(value = "/getAll", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+	public List<MemoDto> getAll() {
+		log.info("GET /rest/memo/getAll");
+		return memoService.getAllMemo();
+	}
+
+	// 메모확인(단건)
+	@GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+	public ResponseEntity<MemoDto> get(@PathVariable int id) {
+		log.info("GET /memo/get... " + id);
+		
+		MemoDto dto = memoService.getMemo(id);
+		if (dto == null) {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+			}
+			return new ResponseEntity<>(dto, HttpStatus.OK);
+	}
+
+	// 메모쓰기 post postman,  view로도 실습
+	@PostMapping("/post") // http://localhost:8090/app/rest/memo/post
+	public void add(@RequestBody MemoDto dto) throws SQLException {
+		log.info("POST /memo/add_rest_post.." + dto);
+		memoService.registrationMemo(dto);
+	}
+	
+	
+	// 메모쓰기 get  view로 실습
+	@GetMapping("/add") 
+	public void addget(MemoDto dto) throws SQLException {
+		log.info("POST /memo/add_rest_post.." + dto);
+		memoService.registrationMemo(dto);
+	}
+	
+	//메모수정1  postman,  view로도 실습
+	@PutMapping("/put/{id}/{text}")
+	public void put(MemoDto dto) {
+		log.info("PUT /memo/put.."+dto);
+		memoService.modifyMemo(dto);
+	}
+	
+	//메모수정2  postman 실습
+	@PutMapping("/put2")	//http://localhost:8080/app/memo/put2
+	public void put2(@RequestBody MemoDto dto) {
+		log.info("PUT /memo/put2.."+dto);
+		memoService.modifyMemo(dto);
+	}
+	
+	//메모패치 postman으로 실습 view는 못만들었음
+	@PatchMapping("/patch/{id}/{text}")
+	public void patch(MemoDto dto) {
+		log.info("PATCH /memo/patch.."+dto);
+		memoService.modifyMemo(dto);
+	}
+	
+	//메모삭제 postman,  view로도 실습
+	@DeleteMapping("/remove/{id}")	//http://localhost:8090/app/memo/remove/{id}
+	public void remove(@PathVariable int id) {
+		log.info("DELETE /memo/remove.."+id);
+		memoService.removeMemo(id);
+	}
+	
+}
+
+
+
+
+
+
+
+-----------
+메모쓰기 
+-----------
+
+postman
+POST 선택
+http://localhost:8090/app/rest/memo/post
+
+Body/raw,json
+
+{"id":"","text":"","writer":","createAt":"YYYY-MM-DDTHH:MM:SS"} 요런 식으로 적으면 됨
+
+입력  -  {"id":"8888","text":"a","writer":"a","createAt":"2025-04-28T11:34:11"} 
+
+Send
+
+Console
+
+INFO : com.example.app.restController.MemoRestController - POST /memo/add_rest_post..MemoDto(id=8888, text=a, writer=a, createAt=2025-04-28T11:34:11)
+DEBUG: com.example.app.domain.mapper.MemoMapper.insert - ==>  Preparing: insert into tbl_memo values(?,?,?,?)
+DEBUG: com.example.app.domain.mapper.MemoMapper.insert - ==> Parameters: 8888(Integer), a(String), a(String), 2025-04-28T11:34:11(LocalDateTime)
+DEBUG: com.example.app.domain.mapper.MemoMapper.insert - <==    Updates: 1
+DEBUG: com.example.app.domain.mapper.MemoMapper.insert!selectKey - ==>  Preparing: select max(id)+1 from tbl_memo
+DEBUG: com.example.app.domain.mapper.MemoMapper.insert!selectKey - ==> Parameters: 
+TRACE: com.example.app.domain.mapper.MemoMapper.insert!selectKey - <==    Columns: max(id)+1
+TRACE: com.example.app.domain.mapper.MemoMapper.insert!selectKey - <==        Row: 8889
+DEBUG: com.example.app.domain.mapper.MemoMapper.insert!selectKey - <==      Total: 1
+
+
+-----------
+전체조회
+-----------
+
+postman
+GET 선택
+http://localhost:8090/app/rest/memo/getAll
+
+Body/raw
+
+Send
+
+Pretty
+[
+    {
+        "id": 8888,
+        "text": "a",
+        "writer": "a",
+        "createAt": [
+            2025,
+            4,
+            28,
+            11,
+            34,
+            11
+        ]
+    }
+
+.
+.
+.
+]
+
+
+Raw
+[{"id":8888,"text":"a","writer":"a","createAt":[2025,4,28,11,34,11]},....]
+확인
+
+
+-----------
+메모확인(단건)
+-----------
+postman
+GET 선택
+http://localhost:8090/app/rest/memo/get/8888
+
+{
+    "id": 8888,
+    "text": "a",
+    "writer": "a",
+    "createAt": [
+        2025,
+        4,
+        28,
+        11,
+        34,
+        11
+    ]
+}
+
+Raw
+{"id":8888,"text":"a","writer":"a","createAt":[2025,4,28,11,34,11]}
+확인
+
+
+
+
+
+
+
+-----------
+메모수정1
+-----------
+postman
+PUT 선택
+http://localhost:8090/app/rest/memo/put/8888/ABCD
+
+tbl_memo 수정확인
+
+
+
+-----------
+메모수정2
+-----------
+postman
+PUT 선택
+http://localhost:8090/app/rest/memo/put2
+body/ raw ,json
+{"id":8889,"text":"BCDE","writer":"a","createAt":[2025,4,28,11,34,11]}
+
+tbl_memo 수정확인
+
+
+-----------
+메모패치
+-----------
+postman
+patch 선택
+http://localhost:8090/app/rest/memo/put2
+
+tbl_memo 확인
+
+-----------
+메모삭제
+-----------
+postman
+delete 선택
+http://localhost:8090/app/rest/memo/put2
+http://localhost:8090/app/rest/memo/remove/8889
+
+tbl_memo 확인
+
+
+
+------------------------
+view로 해보기
+------------------------
+
+
+
+
+
+
+
+----------------------------
+MemoController.java
+----------------------------
+/ex08_restController/src/main/java/com/example/app/controller/MemoController.java
+
+
+맨아래 코드 추가   이부분만 추가했고 나머지는 이전 에 진도나간거임
+	//
+	@GetMapping("/rest")
+	public void rest() {
+		log.info("GET /rest...");
+	}
+
+
+package com.example.app.controller;
+
+import java.beans.PropertyEditorSupport;
+import java.io.FileNotFoundException;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import com.example.app.domain.dto.MemoDto;
+import com.example.app.domain.service.MemoServiceImpl;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Controller
+@Slf4j
+@RequestMapping("/memo")
+public class MemoController {
+	
+	@Autowired
+	private MemoServiceImpl memoServiceImpl;
+
+	
+	//→ WebDataBinder를 통해 특정 필드에 대해 커스텀 바인딩 처리를 적용하는 코드
+	//→ 폼에서 넘어온 문자열 데이터를 자바 객체로 바꾸는 과정을 직접 지정한 것
+//	@InitBinder
+//	public void dataBinder(WebDataBinder webDataBinder) {
+//		log.info("MemoController's dataBinder ..." + webDataBinder);// 커스텀 타입 변환 바인딩 확인용 로그
+//
+//		webDataBinder.registerCustomEditor(LocalDate.class, "dateTest", new DateTestEditor());
+//		//LocalDate.class : 변환될 필드의 타입
+//		//"dateTest" : 바인딩 대상 필드 이름 (ex:UserDto에서 private LocalDate birthday)
+//		//new DateTestEditor() : 변환 로직을 수행할 사용자 정의 변환기
+//	}
+	
+	@GetMapping("/ex")
+	public void ex1_1() throws FileNotFoundException {
+		log.info("GET -");
+		throw new FileNotFoundException("파일을 찾을 수 없습니다.");
+	}
+		
+	@GetMapping("/add")
+	public void add_get(MemoDto dto) throws SQLException {
+		log.info("GET /memo/add...");
+		memoServiceImpl.registrationMemo(dto);
+	}
+	
+	@PostMapping("/add")
+	public void add_post(@Valid MemoDto dto, BindingResult bindingResult, Model model) throws Exception {
+		log.info("POST /memo/add..." + dto);
+		
+		
+	    // BindingResult: @Valid로 실행된 유효성 검사 결과를 담는 객체
+	    // dto에서 지정한 검증 애노테이션(@Min 등)의 유효성 결과가 여기에 저장됨
+
+	    // 유효성 검사 실패 시 true 반환 → 에러 처리
+		if(bindingResult.hasErrors()) {
+			// 예: id 값이 10 미만이면 에러 발생, 해당 에러 메시지를 출력
+//			log.info("유효성 에러발생 : " + bindingResult.getFieldError("id").getDefaultMessage());
+			
+			for(FieldError error : bindingResult.getFieldErrors()) {
+				log.info("Error Field : " + error.getField()+" Error Msg : " + error.getDefaultMessage());
+				model.addAttribute(error.getField(),error.getDefaultMessage());
+			}
+			
+			return ;
+			
+		}
+		
+		//서비스
+		boolean isAdded = memoServiceImpl.registrationMemo(dto);
+//		memoServiceImpl.addMemoTx(dto);
+	}
+	
+	// static private
+	private static class DateTestEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String dateTest) throws IllegalArgumentException {
+			log.info("DateTestEditor's setAsText invoke.." + dateTest);
+			LocalDate date = null;
+			if(dateTest.isEmpty()) {
+				//값 비었으면 지금날짜 저장
+				date = LocalDate.now();
+			}else {
+				//yyyy#MM#dd -> yyyy-MM-dd(LocalDate format)
+				dateTest = dateTest.replaceAll("#", "-");
+				date = LocalDate.parse(dateTest,DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+			}
+			
+			setValue(date);
+		}
+		
+
+	}
+	
+
+	//    /memo/rest.jsp     view 실습 하기위해서 추가했음
+	@GetMapping("/rest")
+	public void rest() {
+		log.info("GET /rest...");
+	}
+	
+
+
+}
+
+
+------------------------------------
+rest.jsp    view
+------------------------------------
+
+/ex08_restController/src/main/webapp/WEB-INF/views/memo/rest.jsp
+
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+    
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ page session="false" %>
+<html>
+<head>
+	<title>Home</title>
+	
+	<style>
+	.wrapper{
+		display:flex;
+		justify-content : left;
+	}
+	.wrapper>div{
+			width : 200px; height : 500px;
+			border : 1px solid;
+			margin : 15px;
+			text-align:center;
+			
+			overflow : auto;
+	}
+	.wrapper>div.result{
+		width : 300px;
+	}
+	.wrapper>div>h1{
+		border : 1px solid;
+		margin-bottom : 15px;
+	}
+	.wrapper>div>div{
+		border : 1px solid;
+		margin : 5px;
+		padding : 0px;
+		opacity:.8;
+	}
+	.wrapper>div>div:hover{
+		background-color:lightgray;
+		opacity:1;
+	}
+	input {
+		width : 55px;
+	}
+	</style>
+</head>
+<body>
+<h1>REST TEST PAGE</h1>
+
+	<div class="wrapper">
+		
+		<!--  -->
+		<div class="xhr-block">
+			<h1>XHR</h1>
+						<div class="get">
+				<h6>[ADD]동기 GET 요청</h6>
+				<form method="get" action="${pageContext.request.contextPath}/add_get">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button>전송</button>  
+				</form>
+			</div>			
+			<div class="get">
+				<h6>[ADD]비동기 GET 요청</h6>
+				<form name="xhrAsyncGetForm" method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button class="xhrAsyncGetBtn">전송</button>  
+				</form>
+			</div>
+			<div class="post">
+				<h6>[ADD]비동기 POST 요청</h6>
+				<form name="xhrAsyncPostForm" method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button class="xhrAsyncPostBtn">전송</button>  
+				</form>
+			</div>
+			<div class="put">
+				<h6>[UPDATE]비동기 PUT 요청</h6>
+				<form name="xhrAsyncPutForm" method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button class="xhrAsyncPutBtn">전송</button>  
+				</form>
+			</div>	
+			<div class="petch">
+				<h6>[UPDATE]비동기 PETCH 요청</h6>
+				<form method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button>전송</button>  
+				</form>
+			</div>				
+			<div class="delete">
+				<h6>[DELETE]비동기 DELETE 요청</h6>
+				<form name="xhrAsyncDeleteForm"  method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button class="xhrAsyncDeleteBtn">전송</button>  
+				</form>
+			</div>
+			
+		</div>
+		
+		<!--  -->
+		<div class="ajax-block">
+			<h1>AJAX</h1>
+			<div></div>
+		</div>
+		
+		<!--  -->
+		<div class="fetch-block">
+			<h1>FETCH</h1>
+			<div></div>
+		</div>
+		
+		
+		<!--  -->
+		<div class="axios-block">
+			<h1>AXIOS</h1>
+			<div class="get">
+				<h6>[ADD]동기 GET 요청</h6>
+				<form method="get" action="${pageContext.request.contextPath}/memo/add">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button>전송</button>  
+				</form>
+			</div>			
+			<div class="get">
+				<h6>[ADD]비동기 GET 요청</h6>
+				<form name="axiosAsyncGetForm" method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button class="axiosAsyncGetBtn">전송</button>  
+				</form>
+			</div>
+			<div class="post">
+				<h6>[ADD]비동기 POST 요청</h6>
+				<form name="axiosAsyncPostForm" method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button class="axiosAsyncPostBtn">전송</button>  
+				</form>
+			</div>
+			<div class="put">
+				<h6>[UPDATE]비동기 PUT 요청</h6>
+				<form name="axiosAsyncPutForm" method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button class="axiosAsyncPutBtn">전송</button>  
+				</form>
+			</div>	
+			<div class="petch">
+				<h6>[UPDATE]비동기 PETCH 요청</h6>
+				<form method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button>전송</button>  
+				</form>
+			</div>				
+			<div class="delete">
+				<h6>[DELETE]비동기 DELETE 요청</h6>
+				<form name="axiosAsyncDeleteForm"  method="" action="" onsubmit="return false">
+					<input name="id"  placeholder="id" />
+					<input name="text" placeholder="text"  />
+					<button class="axiosAsyncDeleteBtn">전송</button>  
+				</form>
+			</div>	
+		</div>
+		
+		
+		<!-- SELECT BLOCK -->
+		<div class="result">
+			<h1>RESULT</h1>
+			<div class="body">
+			
+			</div>
+		</div>
+	</div>
+
+
+	<!--  
+		XHR
+	-->
+	<script>
+	
+	</script>
+	
+	
+	<!-- 
+		AJAX
+	 -->
+	<script>
+	</script>
+	
+	
+	<script>
+		//xhr 를 이용 비동기 요청
+		
+		//ajax를 이용 비동기 요청
+		
+		//fetch 를 이용 비동기 요청
+		
+		//axios 를 이용 비동기 요청
+	
+	</script>
+	
+	
+	<!-- axios cdn-->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.8/axios.min.js" integrity="sha512-PJa3oQSLWRB7wHZ7GQ/g+qyv6r4mbuhmiDb8BjSFZ8NZ2a42oTtAq5n0ucWAwcQDlikAtkub+tPVCw4np27WCg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script>
+			
+		const projectPath='${pageContext.request.contextPath}';
+		
+		//------------------------
+		//GET
+		//------------------------
+		const axiosAsyncGetBtn = document.querySelector('.axiosAsyncGetBtn');
+		axiosAsyncGetBtn.addEventListener('click',function(){
+			const axiosAsyncGetForm = document.axiosAsyncGetForm;
+			
+			axios.get(projectPath+"/rest/memo/add?id="+axiosAsyncGetForm.id.value+"&text="+axiosAsyncGetForm.text.value)
+			.then(resp=>{console.log(resp);})
+			.catch(err=>{console.log(err);});	
+		})
+
+		
+		//------------------------		
+		//POST
+		//------------------------
+		const axiosAsyncPostBtn = document.querySelector('.axiosAsyncPostBtn');
+		axiosAsyncPostBtn.addEventListener('click',function(){
+			//form
+			const axiosAsyncPostForm = document.axiosAsyncPostForm;
+			
+			//header x
+			const headers = {'Content-Type' : 'application/json'};
+			//param
+			const param = {
+					"id" : axiosAsyncPostForm.id.value,
+					"text" : axiosAsyncPostForm.text.value		
+			}
+			
+			//요청
+			axios.post(projectPath+"/rest/memo/post",param,headers)
+			.then(resp=>{console.log(resp);})
+			.catch(err=>{console.log(err);});	
+		})
+		
+		//------------------------
+		//PUT
+		//------------------------
+		const axiosAsyncPutBtn = document.querySelector('.axiosAsyncPutBtn');
+		axiosAsyncPutBtn.addEventListener('click',function(){
+			//form
+			const axiosAsyncPutForm = document.axiosAsyncPutForm;
+			
+			//요청
+			axios.put(projectPath+"/rest/memo/put/"+axiosAsyncPutForm.id.value+"/"+axiosAsyncPutForm.text.value)
+			.then(resp=>{console.log(resp);})
+			.catch(err=>{console.log(err);});	
+		})
+		
+		//------------------------
+		//PETCH
+		//------------------------
+		
+		// 미구현 지피티가 작성해주면면 좋을듯.
+
+		//------------------------
+		//DELETE
+		//------------------------
+		const axiosAsyncDeleteBtn = document.querySelector('.axiosAsyncDeleteBtn');
+		axiosAsyncDeleteBtn.addEventListener('click',function(){
+			//form
+			const axiosAsyncDeleteForm = document.axiosAsyncDeleteForm;
+			
+			//요청
+			axios.delete(projectPath+"/rest/memo/remove/"+axiosAsyncDeleteForm.id.value)
+			.then(resp=>{console.log(resp);})
+			.catch(err=>{console.log(err);});	
+		})		
+		
+	</script>
+</body>
+</html>
+
+
+
+실행해서 잘 되는지 tbl_memo랑 같이 확인

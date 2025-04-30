@@ -1,0 +1,285 @@
+
+
+-------------------------------
+의존성
+-------------------------------
+maven-repository에 spring-aop 검색
+
+아무버전 복 붙 pom.xml
+
+Spring AOP » 6.2.6
+
+<!-- https://mvnrepository.com/artifact/org.springframework/spring-aop -->
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-aop</artifactId>
+    <version>6.2.6</version>
+</dependency>
+
+버전 맞추기
+
+<dependency>
+     <groupId>org.springframework</groupId>
+     <artifactId>spring-aop</artifactId>
+     <version>${org.springframework-version}</version>
+</dependency>
+
+
+
+maven-repository에 aspectjrt 검색
+
+AspectJ Runtime » 1.9.24
+
+복 붙 pom.xml
+<!-- https://mvnrepository.com/artifact/org.aspectj/aspectjrt -->
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjrt</artifactId>
+    <version>1.9.24</version>
+    <scope>runtime</scope>
+</dependency>
+
+버전 맞추기
+<dependency>
+	<groupId>org.aspectj</groupId>
+	<artifactId>aspectjrt</artifactId>
+	<version>${org.aspectj-version}</version>
+</dependency>
+
+
+
+
+
+
+
+
+maven-repository에 aspectjweaver 검색
+
+AspectJ Weaver » 1.9.24
+
+<!-- https://mvnrepository.com/artifact/org.aspectj/aspectjweaver -->
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjweaver</artifactId>
+    <version>1.9.24</version>
+    <scope>runtime</scope>
+</dependency>
+
+버전 맞추기
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjweaver</artifactId>
+    <version>${org.aspectj-version}</version>
+    <scope>runtime</scope>
+</dependency>
+
+
+maven Dependencies에 잘 설치됐는지 확인
+
+update project
+
+
+
+-------------------------------
+aop 패키지 생성
+-------------------------------
+com.example.app.aop
+
+
+
+
+-------------------------------
+root-context.xml
+-------------------------------
+
+컴포넌트 스캔
+<context:component-scan base-package="com.example.app.aop"/>
+
+Namespaces탭에서 aop 체크
+
+xmlns:aop="http://www.springframework.org/schema/aop" 생성 확인
+
+<aop:aspectj-autoproxy /> 추가   설명 : 에노테이션 적용?
+
+
+코드 전체
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd">
+	
+	<!-- Root Context: defines shared resources visible to all other web components -->
+		
+	<!-- 직접 Bean 등록 -->
+	<bean id="personDto1" class="com.example.app.domain.dto.PersonDto">
+		<constructor-arg name="username" value="홍길동" />
+		<constructor-arg name="age" value="11" />
+		<constructor-arg name="addr" value="창원" />
+		
+		<!-- PersonDto dto = new PersonDto(홍길동, 11, 창원); 와 같음-->
+	</bean>
+	
+	<bean id="personDto2" class="com.example.app.domain.dto.PersonDto">
+		<constructor-arg name="username" value="홍길동2" />
+		<constructor-arg name="age" value="55" />
+		<constructor-arg name="addr" value="울산" />
+		
+		<!-- PersonDto dto = new PersonDto(홍길동, 11, 창원); 와 같음-->
+	</bean>
+
+	
+	
+	<!-- Maven Dependencies/spring-jdbc-5.0.7.RELEASE.jar/org.springframework.jdbc/datasource/DriverManagerDataSource.class 우클릭하고 Copy Qualified Name(경로복사) 붙여넣기 , .class지우기  -->
+	<bean id="dataSource1" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<!-- mysql드라이버 있는 위치 구글에 mysql jdbc url검색하면 드라이버위치 , url 쉽게 찾을 수 있음.  -->
+		<property name="driverClassName" value="com.mysql.cj.jdbc.Driver" />
+		<!-- localhost 번호는 어떻게 확인하지? -->
+		<property name="url" value="jdbc:mysql://localhost:3306/testDB" /> 
+		<property name="username" value="root" />
+		<property name="password" value="1234" />
+	</bean>
+		
+	<!-- Namespaces탭에서 context체크 -->
+	<context:component-scan base-package="com.example.app.config" />
+	
+	<!-- com.example.app.domian.dao에 있는 class들 bean에 넣기 -->
+	<context:component-scan base-package="com.example.app.domain.dao" />
+	
+	<!-- com.example.app.domian.service에 있는 class들 bean에 넣기 -->
+	<context:component-scan base-package="com.example.app.domain.service" />
+	
+	<mybatis-spring:scan base-package="com.example.app.domain.mapper"/>
+	
+
+	<context:component-scan base-package="com.example.app.scheduled"/>
+	
+	<context:component-scan base-package="com.example.app.aop"/>
+	
+	<!-- 어노테이션 적용? -->
+	<aop:aspectj-autoproxy />
+	
+	
+	
+	<!-- 
+		애플리케이션 전체에서 공유되는 설정 파일
+		전역 설정 or Bean의 정의
+		주로 비즈니스 로직과 관련된 서비스 , Dao등을 설정
+		데이터베이스 연결, 트랜잭션 관리, 보안설정(Spring Security등..)과 같은 애플리케이션 전체에서 공유되는 설정을 포함
+		딱 한번 생성되는 Bean들이 정의되며, 모든 웹 요청에 공유
+	 -->
+		
+</beans>
+
+-------------------------------
+LoggingAdvice.java
+-------------------------------
+/ex13_aop/src/main/java/com/example/app/aop/LoggingAdvice.java
+
+
+
+코드 전체
+
+package com.example.app.aop;
+
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.springframework.stereotype.Component;
+
+import lombok.extern.slf4j.Slf4j;
+
+
+
+@Aspect
+@Component
+@Slf4j
+public class LoggingAdvice {
+	
+	//어디에 적용시킬껀지 포인트컷표현식
+	//특정 메서드 한해서 적용상황
+	@Before("execution(boolean com.example.app.domain.service.MemoServiceImpl.registrationMemo(..) )")
+	public void loggingBefore(JoinPoint joinPoint) {
+		log.info("[AOP] BEFORE..." + joinPoint);
+		
+	}
+	@After("execution(* com.example.app.domain.service.MemoServiceImpl.getAllMemo(..) )")
+	public void loggingAfter(JoinPoint joinPoint) {
+		log.info("[AOP] AFTER..." + joinPoint);
+		log.info("[AOP] AFTER..." + joinPoint.getTarget());
+		log.info("[AOP] AFTER..." + joinPoint.getSignature());
+		log.info("[AOP] AFTER..." + joinPoint.getSignature().getName());
+		
+	}
+
+	@Around("execution(* com.example.app.domain.service.*.*(..) )") // *.* service하위에있는 모는 서비스 . 모든 메서드
+	public Object loggingAround(ProceedingJoinPoint pjp) throws Throwable {
+		
+		//이전시점
+		log.info("[AOP] AROUND BEFORE");
+		long startTime = System.currentTimeMillis();
+		//MVC흐름대로 진행
+		Object isUpdated = (Object)pjp.proceed();
+		//이후시점
+		log.info("[AOP] AROUND AFTER");
+		long endTime = System.currentTimeMillis();
+		log.info("[AOP] TIME : " + (endTime-startTime) + " ms");
+		
+		return isUpdated;
+		
+	}
+}
+
+
+
+-----------
+@Before("execution(boolean com.example.app.domain.service.MemoServiceImpl.registrationMemo(..) )")
+-----------
+실행하고 
+http://localhost:8090/app/memo/add 접속시
+콘솔에서 확인
+INFO : com.example.app.aop.LoggingAdvice - [AOP] BEFORE...execution(boolean com.example.app.domain.service.MemoServiceImpl.registrationMemo(MemoDto))
+MemoServiceImpl's registrationMemo() invoke..
+INFO : com.example.app.controller.MemoController - GET /memo/add...
+
+
+
+---------
+@After("execution(* com.example.app.domain.service.MemoServiceImpl.getAllMemo(..) )")
+---------
+포스트맨
+get 선택
+http://localhost:8090/app/rest/memo/getAll     send하면
+
+콘솔에서 확인
+INFO : com.example.app.restController.MemoRestController - GET /rest/memo/getAll
+INFO : com.example.app.domain.service.MemoServiceImpl - MemoService's getAllMemo Call! 
+INFO : com.example.app.aop.LoggingAdvice - [AOP] AFTER...execution(List com.example.app.domain.service.MemoServiceImpl.getAllMemo())
+INFO : com.example.app.aop.LoggingAdvice - [AOP] AFTER...com.example.app.domain.service.MemoServiceImpl@617db1b8
+INFO : com.example.app.aop.LoggingAdvice - [AOP] AFTER...List com.example.app.domain.service.MemoServiceImpl.getAllMemo()
+INFO : com.example.app.aop.LoggingAdvice - [AOP] AFTER...getAllMemo
+
+
+
+
+------
+@Around("execution(* com.example.app.domain.service.*.*(..) )") // *.* service하위에있는 모는 서비스 . 모든 메서드
+------
+포스트맨
+
+get 선택
+http://localhost:8090/app/rest/memo/get/8888     send하면
+
+콘솔에서 확인
+INFO : com.example.app.restController.MemoRestController - GET /memo/get... 8888
+INFO : com.example.app.aop.LoggingAdvice - [AOP] AROUND BEFORE
+INFO : com.example.app.aop.LoggingAdvice - [AOP] AROUND AFTER
+INFO : com.example.app.aop.LoggingAdvice - [AOP] TIME : 80 ms

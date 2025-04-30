@@ -1,0 +1,81 @@
+STS3(Spring 5.0.7.RELEASE) 환경 @Scheduled 정리
+
+1. 스케줄링(Scheduling)이란?
+ 특정 시간 간격 또는 특정 시점에 자동으로 작업을 수행하게 만드는 기능
+ Spring에서는 @Scheduled 어노테이션을 사용해 간단하게 구현 가능 
+ 별도의 스레드 풀에서 비동기로 실행됨 (기본 1개 스레드)
+
+---------------------------
+의존성
+---------------------------
+
+---------------------------
+scheduled packege 생성
+---------------------------
+com.example.app.scheduled
+
+
+---------------------------
+root-context.xml 스캔
+---------------------------
+<context:component-scan base-package="com.example.app.scheduled"/>
+
+
+
+
+---------------------------
+Scheduling.java
+---------------------------
+/ex12_scheduled/src/main/java/com/example/app/scheduled/Scheduling.java
+
+package com.example.app.scheduled;
+
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+@Component
+@EnableScheduling
+public class Scheduling {
+
+//	@Scheduled(fixedRate = 1000)
+//	public void t1() {
+//		System.out.println("Scheduling's t1() invoke...");
+//	}
+	
+		
+	@Scheduled(cron = "*/3 * * * * * ") 
+	public void t2() {
+		System.out.println("Scheduling's t2() invoke...");
+	}
+}
+
+
+
+
+
+
+
+-----------------
+@Scheduled(fixedRate = 1000)
+-----------------
+
+실행 
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...
+
+-----------------
+@Scheduled(cron = "* * * * * * ")
+-----------------
+
+실행 
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...
+Scheduling's t1 invoke...

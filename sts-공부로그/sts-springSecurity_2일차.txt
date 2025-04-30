@@ -1,0 +1,3515 @@
+
+
+
+
+----------------------------
+SecurityConfig.java
+----------------------------
+package com.example.app.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//권한체크
+		http.authorizeRequests()
+		.anyRequest().authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		auth.inMemoryAuthentication()
+			.withUser("user")
+			.password("{noop}1234")
+			.roles("USER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("manager")
+			.password("{noop}1234")
+			.roles("MANAGER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("admin")
+			.password("{noop}1234")
+			.roles("ADMIN");
+	}
+
+	
+	
+}
+
+
+---------------
+로그인하고 
+
+http://localhost:8090/app/logout 접속시 로그아웃 됨.
+
+
+
+------------------------------------
+UserController.java
+------------------------------------
+/ex14_springSecurity/src/main/java/com/example/app/controller/UserController.java
+
+<<추가코드>>  매핑 추가
+	@GetMapping("/user")
+	public void user() {
+		log.info("GET /user...");
+	}
+	
+	@GetMapping("/manager")
+	public void manager() {
+		log.info("GET /manager...");
+		
+	}
+	
+	@GetMapping("/admin")
+	public void admin() {
+		log.info("GET /admin...");
+		
+	}
+
+
+
+<<적용코드>>
+
+package com.example.app.controller;
+
+import java.beans.PropertyEditorSupport;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+import javax.validation.Valid;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+
+import com.example.app.domain.dto.UserDto;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Controller
+@Slf4j
+public class UserController {
+	
+	
+	@InitBinder
+	public void dataBinder(WebDataBinder webDataBinder) {
+		log.info("MemoController's dataBinder ..." + webDataBinder);
+		webDataBinder.registerCustomEditor(LocalDate.class, "birthday", new DateTextEditor());
+		webDataBinder.registerCustomEditor(String.class, "phone", new phoneTextEditor());
+	}
+	
+	@GetMapping("/user")
+	public void user() {
+		log.info("GET /user...");
+	}
+	
+	@GetMapping("/manager")
+	public void manager() {
+		log.info("GET /manager...");
+		
+	}
+	
+	@GetMapping("/admin")
+	public void admin() {
+		log.info("GET /admin...");
+		
+	}
+	
+	@GetMapping("/join")
+	public void join() {
+		log.info("GET /join..");
+	}
+	
+	@PostMapping("/join")
+	public void join_post(@Valid UserDto dto, BindingResult bindingResult, Model model) {
+		log.info("POST /join.." + dto);
+		
+		if(bindingResult.hasErrors()) {
+			
+			for(FieldError error : bindingResult.getFieldErrors()) {
+				log.info("Error Field : " + error.getField()+" Error Msg : " + error.getDefaultMessage());
+				model.addAttribute(error.getField(),error.getDefaultMessage());
+			}
+		}
+	}
+	
+	//WebDateBinder Custom설정
+	//파라미터 중 phone의 값중 '-' 는 없애고 바인딩할것(010-111-2222 -> 0101112222)
+	//파라미터 중 birthday의 ~은 -로 바꾼뒤 LocalDate 로 Outformatting 할것
+	
+	private static class DateTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String birthdaytext) throws IllegalArgumentException {
+			log.info("DateTestEditor's setAsText invoke.." + birthdaytext);
+			LocalDate date = null;
+			if(birthdaytext.isEmpty()) {
+				date = LocalDate.now();
+			}else {
+				birthdaytext = birthdaytext.replaceAll("~", "-");
+				date = LocalDate.parse(birthdaytext,DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+			}
+			setValue(date);
+			
+		}
+		
+	}
+	
+	private static class phoneTextEditor extends PropertyEditorSupport{
+
+		@Override
+		public void setAsText(String phonetext) throws IllegalArgumentException {
+			log.info("phoneTestEditer's setAsText invoke.." + phonetext);
+				phonetext = phonetext.replaceAll("-", "");
+				setValue(phonetext);
+		}
+		
+	}
+}
+
+
+----------------------------------
+user.jsp
+----------------------------------
+/ex14_springSecurity/src/main/webapp/WEB-INF/views/user.jsp
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8" isErrorPage="true"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h1>USER</h1>
+	
+	<a href="${pageContext.request.contextPath }/logout">로그아웃</a>
+</body>
+</html>
+
+
+
+----------------------------------
+manager.jsp
+----------------------------------
+/ex14_springSecurity/src/main/webapp/WEB-INF/views/manager.jsp
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8" isErrorPage="true"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h1>MANAGER</h1>
+	
+	<a href="${pageContext.request.contextPath }/logout">로그아웃</a>
+</body>
+</html>
+
+
+
+----------------------------------
+admin.jsp
+----------------------------------
+/ex14_springSecurity/src/main/webapp/WEB-INF/views/admin.jsp
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8" isErrorPage="true"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h1>ADMIN</h1>
+	
+	<a href="${pageContext.request.contextPath }/logout">로그아웃</a>
+</body>
+</html>
+
+
+
+
+
+----------------------------
+SecurityConfig.java
+----------------------------
+
+.authenticated();  주석하고 실행해서 /user , /manager , /admin 잘 접속 되는지 확인.
+
+
+
+<<코드>>
+package com.example.app.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//권한체크
+		http.authorizeRequests()
+			.anyRequest()
+			.permitAll();	// 위의 경로에 누구나 접근 가능
+//			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		auth.inMemoryAuthentication()
+			.withUser("user")
+			.password("{noop}1234")
+			.roles("USER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("manager")
+			.password("{noop}1234")
+			.roles("MANAGER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("admin")
+			.password("{noop}1234")
+			.roles("ADMIN");
+	}
+
+	
+	
+}
+
+
+
+
+
+----------------------------
+SecurityConfig.java
+----------------------------
+
+
+/ , join 그냥 접속 되는지 확인
+
+/user , /manager , /admin  접속시도시 http://localhost:8090/app/login 로 접속됨.
+
+user계정으로 로그인 후 
+/manager , /admin 접속 시도시 
+403에러 발생 확인.
+
+
+
+
+package com.example.app.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		auth.inMemoryAuthentication()
+			.withUser("user")
+			.password("{noop}1234")
+			.roles("USER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("manager")
+			.password("{noop}1234")
+			.roles("MANAGER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("admin")
+			.password("{noop}1234")
+			.roles("ADMIN");
+	}
+
+	
+	
+}
+
+
+
+
+----------------------------
+SecurityConfig.java
+----------------------------
+
+join form에서 
+id : user
+pw : 1234 하면
+
+security에서 
+BCryptPasswordEncoder에서 암호화? 해서 저장함
+시스템 내부에서는 유저가 입력한 pw : 1234를 모름
+입력한 유저만 알고있는거임
+
+.password("{noop}1234")  : 
+Spring Security가 비밀번호를 암호화하지 않고, 문자열 그대로 비교하라는 뜻.
+
+
+.password(passwordEncoder.encode("1234")) :
+encode()를 호출하면 해시 알고리즘으로 암호화된 비밀번호를 반환.
+DB에 저장할 때는 이 암호화된 값을 저장하고,
+로그인 시 입력값도 암호화한 후 비교 (matches() 메서드 이용).
+
+
+
+<<전체코드>>
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		auth.inMemoryAuthentication()
+			.withUser("user")
+			.password("{noop}1234")
+			.roles("USER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("manager")
+			.password("{noop}1234")
+			.roles("MANAGER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("admin")
+			.password("{noop}1234")
+			.roles("ADMIN");
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+
+
+-------------------------------
+CSRF 공격이란?
+-------------------------------
+CSRF 가 뭔지 정리 해주세요 chat gpt
+
+
+
+------------------------------
+SecurityConfig.java
+------------------------------
+
+//CSRF토큰 쿠키형태로 전달
+		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+추가해서 실행해보고 개발자도구에서 Applicateon에서 쿠키 확인.
+
+
+
+<<코드>>
+
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+//		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		auth.inMemoryAuthentication()
+			.withUser("user")
+			.password(passwordEncoder.encode("1234"))
+			.roles("USER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("manager")
+			.password(passwordEncoder.encode("1234"))
+			.roles("MANAGER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("admin")
+			.password(passwordEncoder.encode("1234"))
+			.roles("ADMIN");
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+------------------------------
+SecurityConfig.java    로그인 csrf 직접 만들기
+------------------------------
+
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+//		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		auth.inMemoryAuthentication()
+			.withUser("user")
+			.password(passwordEncoder.encode("1234"))
+			.roles("USER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("manager")
+			.password(passwordEncoder.encode("1234"))
+			.roles("MANAGER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("admin")
+			.password(passwordEncoder.encode("1234"))
+			.roles("ADMIN");
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+------------------------
+UserController.java     로그인 csrf 직접 만들기
+------------------------
+<<추가코드>>
+	@GetMapping("/login")
+	public void login() {
+		log.info("GET /login...");
+	}
+
+
+<<전체코드>>
+
+package com.example.app.controller;
+
+import java.beans.PropertyEditorSupport;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+import javax.validation.Valid;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+
+import com.example.app.domain.dto.UserDto;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Controller
+@Slf4j
+public class UserController {
+	
+	
+	@InitBinder
+	public void dataBinder(WebDataBinder webDataBinder) {
+		log.info("MemoController's dataBinder ..." + webDataBinder);
+		webDataBinder.registerCustomEditor(LocalDate.class, "birthday", new DateTextEditor());
+		webDataBinder.registerCustomEditor(String.class, "phone", new phoneTextEditor());
+	}
+	
+	@GetMapping("/login")
+	public void login() {
+		log.info("GET /login...");
+	}
+	
+	
+	@GetMapping("/user")
+	public void user() {
+		log.info("GET /user...");
+	}
+	
+	@GetMapping("/manager")
+	public void manager() {
+		log.info("GET /manager...");
+		
+	}
+	
+	@GetMapping("/admin")
+	public void admin() {
+		log.info("GET /a...");
+		
+	}
+	
+	@GetMapping("/join")
+	public void join() {
+		log.info("GET /join..");
+	}
+	
+	@PostMapping("/join")
+	public void join_post(@Valid UserDto dto, BindingResult bindingResult, Model model) {
+		log.info("POST /join.." + dto);
+		
+		if(bindingResult.hasErrors()) {
+			
+			for(FieldError error : bindingResult.getFieldErrors()) {
+				log.info("Error Field : " + error.getField()+" Error Msg : " + error.getDefaultMessage());
+				model.addAttribute(error.getField(),error.getDefaultMessage());
+			}
+		}
+	}
+	
+	//WebDateBinder Custom설정
+	//파라미터 중 phone의 값중 '-' 는 없애고 바인딩할것(010-111-2222 -> 0101112222)
+	//파라미터 중 birthday의 ~은 -로 바꾼뒤 LocalDate 로 Outformatting 할것
+	
+	private static class DateTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String birthdaytext) throws IllegalArgumentException {
+			log.info("DateTestEditor's setAsText invoke.." + birthdaytext);
+			LocalDate date = null;
+			if(birthdaytext.isEmpty()) {
+				date = LocalDate.now();
+			}else {
+				birthdaytext = birthdaytext.replaceAll("~", "-");
+				date = LocalDate.parse(birthdaytext,DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+			}
+			setValue(date);
+			
+		}
+		
+	}
+	
+	private static class phoneTextEditor extends PropertyEditorSupport{
+
+		@Override
+		public void setAsText(String phonetext) throws IllegalArgumentException {
+			log.info("phoneTestEditer's setAsText invoke.." + phonetext);
+				phonetext = phonetext.replaceAll("-", "");
+				setValue(phonetext);
+		}
+		
+	}
+}
+
+
+
+-------------------------
+login.jsp    로그인 csrf 직접 만들기
+-------------------------
+/ex14_springSecurity/src/main/webapp/WEB-INF/views/login.jsp
+
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8" isErrorPage="true"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h1>LOGIN</h1>
+	<form action="${pageContext.request.contextPath}/login" method="post">
+		USERNAME : <input name="username" /><br>
+		PASSWORD : <input name="password" type="password" /><br>
+		<button>로그인</button>
+		<%-- <input type="hidden" name="_csrf" value="${_csrf.token }" /> --%>
+	</form>
+</body>
+</html>
+
+
+csrf 부분 주석하고 /login 접속 후 로그인 버튼 누를시 403에러 발생
+
+
+
+<body>
+	<h1>LOGIN</h1>
+	<form action="${pageContext.request.contextPath}/login" method="post">
+		USERNAME : <input name="username" /><br>
+		PASSWORD : <input name="password" type="password" /><br>
+		<button>로그인</button>
+		<input type="hidden" name="_csrf" value="${_csrf.token }" />
+	</form>
+</body>
+
+주색 해제하고 로그인 시도시 로그인 됨.
+
+
+
+-------------------------
+login.jsp
+-------------------------
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8" isErrorPage="true"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h1>LOGIN</h1>
+	<form action="${pageContext.request.contextPath}/login" method="post">
+		USERNAME : <input name="username" /><br>
+		PASSWORD : <input name="password" type="password" /><br>
+		<button>로그인</button>
+		<%-- <input type="hidden" name="_csrf" value="${_csrf.token }" /> --%>
+	</form>
+</body>
+</html>
+
+
+<input type="hidden" name="_csrf" value="${_csrf.token }" /> 주석하고
+
+
+
+
+SecurityConfig
+
+http.csrf().disable();주석 해제
+--------------------------
+SecurityConfig.java
+--------------------------
+
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+//		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+		auth.inMemoryAuthentication()
+			.withUser("user")
+			.password(passwordEncoder.encode("1234"))
+			.roles("USER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("manager")
+			.password(passwordEncoder.encode("1234"))
+			.roles("MANAGER");
+		
+		auth.inMemoryAuthentication()
+			.withUser("admin")
+			.password(passwordEncoder.encode("1234"))
+			.roles("ADMIN");
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+-----------------------
+tbl_user
+-----------------------
+username varchar(45) pk notnull
+password varchar(255) 
+role varchar(255)
+-----------------------
+
+
+
+
+
+-----------------------
+join.jsp
+-----------------------
+/ex14_springSecurity/src/main/webapp/WEB-INF/views/join.jsp
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+	<form action="${pageContext.request.contextPath }/join" method="post">
+		<div>
+			<h1>회원가입</h1>
+		</div>
+		<div>
+			<label>username : </label><span style="color:red;font-size:.7rem;">${username}</span><br>
+			<input name="username" />
+		</div>
+		<div>
+			<label>password : </label><span style="color:red;font-size:.7rem;">${password}</span><br>
+			<input name="password" />
+		</div>
+		
+<%-- 		
+		<div>
+			<label>rePassword : </label><span style="color:red;font-size:.7rem;">${rePassword}</span><br>
+			<input name="rePassword" />
+		</div>
+		<div>
+			<label>username : </label><span style="color:red;font-size:.7rem;">${username}</span><br>
+			<input name="username" />
+		</div>
+		<div>
+			<label>phone : </label><span style="color:red;font-size:.7rem;">${phone}</span><br>
+			<input name="phone" placeholder="0xx-xxx-xxxx or 0xx-xxxx-xxxx" />
+		</div>
+		<div>
+			<label>zipcode : </label><span style="color:red;font-size:.7rem;">${zipcode}</span><br>
+			<input name="zipcode" />
+		</div>
+		<div>
+			<label>addr1 : </label><span style="color:red;font-size:.7rem;">${addr1}</span><br>
+			<input name="addr1" />
+		</div>
+		<div>
+			<label>addr2 : </label><span style="color:red;font-size:.7rem;">${addr2}</span><br>
+			<input name="addr2" />
+		</div>
+		<div>
+			<label>birthday : </label><span style="color:red;font-size:.7rem;">${birthday}</span><br>
+			<input type="text" name="birthday" placeHolder="ex)2025~01~01"/>
+		</div>
+--%>
+
+		<div>
+			<input type="submit" value="회원가입" />
+		</div>
+
+	
+	</form>
+</body>
+</html>
+
+
+
+
+
+
+---------------------------
+UserServiceImpl.java
+---------------------------
+/ex14_springSecurity/src/main/java/com/example/app/domain/service/UserServiceImpl.java
+
+package com.example.app.domain.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.example.app.domain.dto.UserDto;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@Slf4j
+public class UserServiceImpl {
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	public boolean userJoin(UserDto userDto) {
+		
+		userDto.setPassword( passwordEncoder.encode(userDto.getPassword()) );
+		return false;
+	}
+	
+	
+}
+
+
+
+
+
+
+---------------------------
+UserDto.java
+---------------------------
+/ex14_springSecurity/src/main/java/com/example/app/domain/dto/UserDto.java
+
+
+package com.example.app.domain.dto;
+
+import javax.validation.constraints.NotBlank;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class UserDto {
+	
+
+	private String username;		//유저ID
+	@NotBlank(message="password 를 입력하세요")
+	private String password;	//패스워드
+	private String role;
+	
+//	@NotBlank(message="rePassword 를 입력하세요")
+//	private String rePassword;	//패스워드확인
+//	@NotBlank(message="username 를 입력하세요")
+//	private String username;	//유저이름
+//	@NotBlank(message="phone 를 입력하세요")
+//	private String phone;		//전화번호
+//	@NotBlank(message="zipcode 를 입력하세요")
+//	private String zipcode;		//우편번호
+//	@NotBlank(message="addr1 를 입력하세요")
+//	private String addr1;		//기본주소
+//	@NotBlank(message="addr2 를 입력하세요")
+//	private String addr2;		//상세주소
+//	
+//	@NotNull(message="birthday 를 입력하세요")
+//	@DateTimeFormat(pattern="yyyy-MM-dd")
+//	private LocalDate birthday;	//생년월일(yyyy-MM-dd)
+
+
+
+
+}
+
+
+
+
+
+---------------------------
+UserMapper.java
+---------------------------
+/ex14_springSecurity/src/main/java/com/example/app/domain/mapper/UserMapper.java
+
+
+package com.example.app.domain.mapper;
+
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import com.example.app.domain.dto.UserDto;
+
+@Mapper
+public interface UserMapper {
+
+	@Insert("insert into tbl_user values(#{useername},#{password},#{role})")
+	public int insert(UserDto userDto);
+	
+
+	
+}
+
+
+
+
+---------------------------
+UserServiceImpl.java
+---------------------------
+
+package com.example.app.domain.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.app.domain.dto.UserDto;
+import com.example.app.domain.mapper.UserMapper;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@Slf4j
+public class UserServiceImpl {
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private UserMapper userMapper;
+	
+	@Transactional(noRollbackFor = Exception.class)
+	public boolean userJoin(UserDto userDto) {
+		
+		userDto.setPassword( passwordEncoder.encode(userDto.getPassword()) );
+		userDto.setRole("ROLE_USER");  //"USER"은 Security에서만 ? : Spring Security는 ROLE_ 접두어를 자동으로 붙여서 내부적으로 처리한다.
+									   //.hasRole("USER") → 실제로는 "ROLE_USER"와 비교됨.
+		int result = userMapper.insert(userDto);
+		return result>0;
+	}
+	
+	
+}
+
+
+---------------------------
+UserController.java  
+---------------------------
+UserServiece 연걸
+
+<<추가>>
+	@Autowired
+	private UserServiceImpl userService;
+
+
+	@PostMapping("/join")
+	public String join_post(@Valid UserDto dto, BindingResult bindingResult, Model model, RedirectAttributes redirectAttributes) {
+		log.info("POST /join.." + dto);
+
+		for (FieldError error : bindingResult.getFieldErrors()) {
+			log.info("Error Field : " + error.getField() + " Error Msg : " + error.getDefaultMessage());
+			model.addAttribute(error.getField(), error.getDefaultMessage());
+			return "join";
+		}
+		
+		boolean isJoin = userService.userJoin(dto);
+		if(isJoin)
+			return "redirect:/login";
+		else
+			return "forward:/join";
+
+	}
+
+<<전체코드>>
+package com.example.app.controller;
+
+import java.beans.PropertyEditorSupport;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.example.app.domain.dto.UserDto;
+import com.example.app.domain.service.UserServiceImpl;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Controller
+@Slf4j
+public class UserController {
+
+	@Autowired
+	private UserServiceImpl userService;
+
+	@InitBinder
+	public void dataBinder(WebDataBinder webDataBinder) {
+		log.info("MemoController's dataBinder ..." + webDataBinder);
+		webDataBinder.registerCustomEditor(LocalDate.class, "birthday", new DateTextEditor());
+		webDataBinder.registerCustomEditor(String.class, "phone", new phoneTextEditor());
+	}
+
+	@GetMapping("/login")
+	public void login() {
+		log.info("GET /login...");
+	}
+
+	@GetMapping("/user")
+	public void user() {
+		log.info("GET /user...");
+	}
+
+	@GetMapping("/manager")
+	public void manager() {
+		log.info("GET /manager...");
+
+	}
+
+	@GetMapping("/admin")
+	public void admin() {
+		log.info("GET /a...");
+
+	}
+
+	@GetMapping("/join")
+	public void join() {
+		log.info("GET /join..");
+	}
+
+	@PostMapping("/join")
+	public String join_post(@Valid UserDto dto, BindingResult bindingResult, Model model, RedirectAttributes redirectAttributes) {
+		log.info("POST /join.." + dto);
+
+		for (FieldError error : bindingResult.getFieldErrors()) {
+			log.info("Error Field : " + error.getField() + " Error Msg : " + error.getDefaultMessage());
+			model.addAttribute(error.getField(), error.getDefaultMessage());
+			return "join";
+		}
+		
+		boolean isJoin = userService.userJoin(dto);
+		if(isJoin)
+			return "redirect:/login";
+		else
+			return "forward:/join";
+
+	}
+
+	// WebDateBinder Custom설정
+	// 파라미터 중 phone의 값중 '-' 는 없애고 바인딩할것(010-111-2222 -> 0101112222)
+	// 파라미터 중 birthday의 ~은 -로 바꾼뒤 LocalDate 로 Outformatting 할것
+
+	private static class DateTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String birthdaytext) throws IllegalArgumentException {
+			log.info("DateTestEditor's setAsText invoke.." + birthdaytext);
+			LocalDate date = null;
+			if (birthdaytext.isEmpty()) {
+				date = LocalDate.now();
+			} else {
+				birthdaytext = birthdaytext.replaceAll("~", "-");
+				date = LocalDate.parse(birthdaytext, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+			}
+			setValue(date);
+
+		}
+
+	}
+
+	private static class phoneTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String phonetext) throws IllegalArgumentException {
+			log.info("phoneTestEditer's setAsText invoke.." + phonetext);
+			phonetext = phonetext.replaceAll("-", "");
+			setValue(phonetext);
+		}
+
+	}
+}
+
+
+
+
+-------------------------
+PrincipalDetails.java
+-------------------------
+/ex14_springSecurity/src/main/java/com/example/app/config/auth/PrincipalDetails.java
+
+package com.example.app.config.auth;
+
+import java.util.ArrayList;
+import java.util.Collection;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
+import com.example.app.domain.dto.UserDto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+// 유저 정보 담는 곳
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class PrincipalDetails implements UserDetails {
+	private UserDto userDto;
+
+	@Override
+	public Collection<? extends GrantedAuthority> getAuthorities() { //권한체크
+		Collection <GrantedAuthority> authorities = new ArrayList();
+		authorities.add(new SimpleGrantedAuthority(userDto.getRole()));
+		
+		return authorities;
+	}
+
+	@Override
+	public String getPassword() {
+		// TODO Auto-generated method stub
+		return userDto.getPassword();
+	}
+
+	@Override
+	public String getUsername() {
+		// TODO Auto-generated method stub
+		return userDto.getUsername();
+	}
+
+	@Override
+	public boolean isAccountNonExpired() {
+		// TODO Auto-generated method stub
+		return true;
+	}
+
+	@Override
+	public boolean isAccountNonLocked() {
+		// TODO Auto-generated method stub
+		return true;
+	}
+
+	@Override
+	public boolean isCredentialsNonExpired() {
+		// TODO Auto-generated method stub
+		return true;
+	}
+
+	@Override
+	public boolean isEnabled() {
+		// TODO Auto-generated method stub
+		return true;
+	}
+
+	
+}
+
+
+
+-------------------------
+PrincipalDetailsService.java
+-------------------------
+/ex14_springSecurity/src/main/java/com/example/app/config/auth/PrincipalDetailsService.java
+
+package com.example.app.config.auth;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import com.example.app.domain.dto.UserDto;
+import com.example.app.domain.mapper.UserMapper;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@Slf4j
+public class PrincipalDetailsService implements UserDetailsService {
+
+	@Autowired
+	private UserMapper userMapper;
+	
+	@Override
+	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException { 
+		//로그인 폼에서 아이디 입력하면 유저내임을  String username에 받아옴
+
+		UserDto userDto = userMapper.selectAt(username);
+		if(userDto==null)
+			throw new UsernameNotFoundException(username + " 존재하지 않는 계정입니다.");
+		
+		return new PrincipalDetails(userDto);
+	}
+	
+
+}
+
+
+-------------------------
+UserMapper.java
+-------------------------
+
+package com.example.app.domain.mapper;
+
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+
+import com.example.app.domain.dto.UserDto;
+
+@Mapper
+public interface UserMapper {
+
+	@Insert("insert into tbl_user values(#{username},#{password},#{role})")
+	public int insert(UserDto userDto);
+	
+	@Select("select * from tbl_user where username=#{username}")
+	public UserDto selectAt(String username);
+	
+
+	
+}
+
+
+
+
+-------------------------
+SecurityConfig.java
+-------------------------
+
+PrincipalDetailsService연결
+	@Autowired
+	private PrincipalDetailsService principalDetailsService;
+
+auth.userDetailsService(principalDetailsService).passwordEncoder(passwordEncoder);
+
+추가
+
+<<전체코드>>
+
+
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.example.app.config.auth.PrincipalDetailsService;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private PrincipalDetailsService principalDetailsService;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+//		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//		auth.inMemoryAuthentication()
+//			.withUser("user")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("USER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("manager")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("MANAGER");
+//		
+
+//		auth.inMemoryAuthentication()
+//			.withUser("admin")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("ADMIN");
+		
+		auth.userDetailsService(principalDetailsService).passwordEncoder(passwordEncoder);
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+--------------------------------
+UserController.java
+--------------------------------
+방법 1
+
+<<추가코드>>
+	@GetMapping("/user")
+	public void user(Authentication authentication) {
+		log.info("GET /user..." + authentication);
+		log.info("name..." + authentication.getName());
+		log.info("principal..." + authentication.getPrincipal());
+		log.info("authorities..." + authentication.getAuthorities());
+		log.info("details..." + authentication.getDetails());
+		log.info("credentials..." + authentication.getCredentials());
+	}
+
+
+user계정로그인시 콘솔에 아래 확인
+
+INFO : com.example.app.controller.UserController - GET /user...org.springframework.security.authentication.UsernamePasswordAuthenticationToken@1f35fd2d: Principal: PrincipalDetails(userDto=UserDto(username=user, password=$2a$10$aOIo1l8U6Mag6Xklsu1.Ye3pOV5AJvE431NLwX/.VWJjRdN3oJOuC, role=ROLE_USER)); Credentials: [PROTECTED]; Authenticated: true; Details: org.springframework.security.web.authentication.WebAuthenticationDetails@2cd90: RemoteIpAddress: 0:0:0:0:0:0:0:1; SessionId: D6B93795E6DECD953A142F7C715CC5C4; Granted Authorities: ROLE_USER
+INFO : com.example.app.controller.UserController - name...user
+INFO : com.example.app.controller.UserController - principal...PrincipalDetails(userDto=UserDto(username=user, password=$2a$10$aOIo1l8U6Mag6Xklsu1.Ye3pOV5AJvE431NLwX/.VWJjRdN3oJOuC, role=ROLE_USER))
+INFO : com.example.app.controller.UserController - authorities...[ROLE_USER]
+INFO : com.example.app.controller.UserController - details...org.springframework.security.web.authentication.WebAuthenticationDetails@2cd90: RemoteIpAddress: 0:0:0:0:0:0:0:1; SessionId: D6B93795E6DECD953A142F7C715CC5C4
+INFO : com.example.app.controller.UserController - credentials...null
+
+
+<<전체코드>>
+package com.example.app.controller;
+
+import java.beans.PropertyEditorSupport;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.example.app.domain.dto.UserDto;
+import com.example.app.domain.service.UserServiceImpl;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Controller
+@Slf4j
+public class UserController {
+
+	@Autowired
+	private UserServiceImpl userService;
+
+	@InitBinder
+	public void dataBinder(WebDataBinder webDataBinder) {
+		log.info("MemoController's dataBinder ..." + webDataBinder);
+		webDataBinder.registerCustomEditor(LocalDate.class, "birthday", new DateTextEditor());
+		webDataBinder.registerCustomEditor(String.class, "phone", new phoneTextEditor());
+	}
+
+	@GetMapping("/login")
+	public void login() {
+		log.info("GET /login...");
+	}
+	
+	@GetMapping("/user")
+	public void user(Authentication authentication) {
+		log.info("GET /user..." + authentication);
+		log.info("name..." + authentication.getName());
+		log.info("principal..." + authentication.getPrincipal());
+		log.info("authorities..." + authentication.getAuthorities());
+		log.info("details..." + authentication.getDetails());
+		log.info("credentials..." + authentication.getCredentials());
+	}
+
+	@GetMapping("/manager")
+	public void manager() {
+		log.info("GET /manager...");
+
+	}
+
+	@GetMapping("/admin")
+	public void admin() {
+		log.info("GET /a...");
+
+	}
+
+	@GetMapping("/join")
+	public void join() {
+		log.info("GET /join..");
+	}
+
+	@PostMapping("/join")
+	public String join_post(@Valid UserDto dto, BindingResult bindingResult, Model model, RedirectAttributes redirectAttributes) {
+		log.info("POST /join.." + dto);
+
+		for (FieldError error : bindingResult.getFieldErrors()) {
+			log.info("Error Field : " + error.getField() + " Error Msg : " + error.getDefaultMessage());
+			model.addAttribute(error.getField(), error.getDefaultMessage());
+			return "join";
+		}
+		
+		boolean isJoin = userService.userJoin(dto);
+		if(isJoin) {
+			redirectAttributes.addFlashAttribute("message","회원가입 완료!"); //sessino 에 저장
+			return "redirect:/login";
+		}
+		else
+			return "join";
+
+	}
+
+	// WebDateBinder Custom설정
+	// 파라미터 중 phone의 값중 '-' 는 없애고 바인딩할것(010-111-2222 -> 0101112222)
+	// 파라미터 중 birthday의 ~은 -로 바꾼뒤 LocalDate 로 Outformatting 할것
+
+	private static class DateTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String birthdaytext) throws IllegalArgumentException {
+			log.info("DateTestEditor's setAsText invoke.." + birthdaytext);
+			LocalDate date = null;
+			if (birthdaytext.isEmpty()) {
+				date = LocalDate.now();
+			} else {
+				birthdaytext = birthdaytext.replaceAll("~", "-");
+				date = LocalDate.parse(birthdaytext, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+			}
+			setValue(date);
+
+		}
+
+	}
+
+	private static class phoneTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String phonetext) throws IllegalArgumentException {
+			log.info("phoneTestEditer's setAsText invoke.." + phonetext);
+			phonetext = phonetext.replaceAll("-", "");
+			setValue(phonetext);
+		}
+
+	}
+}
+
+
+
+--------------------------------
+UserController.java
+--------------------------------
+
+방법 2
+<<추가코드>>
+	@GetMapping("/user")
+	public void user(@AuthenticationPrincipal Principal principal) {
+		log.info("GET /user..." + principal);
+
+	}
+로그인 하고
+http://localhost:8090/app/user접속
+
+콘솔 확인
+INFO : com.example.app.controller.UserController - GET /user...org.springframework.security.authentication.UsernamePasswordAuthenticationToken@e0cb4fb1: Principal: PrincipalDetails(userDto=UserDto(username=user, password=$2a$10$aOIo1l8U6Mag6Xklsu1.Ye3pOV5AJvE431NLwX/.VWJjRdN3oJOuC, role=ROLE_USER)); Credentials: [PROTECTED]; Authenticated: true; Details: org.springframework.security.web.authentication.WebAuthenticationDetails@fffc7f0c: RemoteIpAddress: 0:0:0:0:0:0:0:1; SessionId: A849E91190DA583FE7EDD1E1A1D5B4CE; Granted Authorities: ROLE_USER
+
+
+<<전체코드>>
+
+
+package com.example.app.controller;
+
+import java.beans.PropertyEditorSupport;
+import java.security.Principal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.example.app.domain.dto.UserDto;
+import com.example.app.domain.service.UserServiceImpl;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Controller
+@Slf4j
+public class UserController {
+
+	@Autowired
+	private UserServiceImpl userService;
+
+	@InitBinder
+	public void dataBinder(WebDataBinder webDataBinder) {
+		log.info("MemoController's dataBinder ..." + webDataBinder);
+		webDataBinder.registerCustomEditor(LocalDate.class, "birthday", new DateTextEditor());
+		webDataBinder.registerCustomEditor(String.class, "phone", new phoneTextEditor());
+	}
+
+	@GetMapping("/login")
+	public void login() {
+		log.info("GET /login...");
+	}
+	
+//	@GetMapping("/user")
+//	public void user(Authentication authentication) {
+//		log.info("GET /user..." + authentication);
+//		log.info("name..." + authentication.getName());
+//		log.info("principal..." + authentication.getPrincipal());
+//		log.info("authorities..." + authentication.getAuthorities());
+//		log.info("details..." + authentication.getDetails());
+//		log.info("credentials..." + authentication.getCredentials());
+//	}
+	
+	@GetMapping("/user")
+	public void user(@AuthenticationPrincipal Principal principal) {
+		log.info("GET /user..." + principal);
+
+	}
+
+	@GetMapping("/manager")
+	public void manager() {
+		log.info("GET /manager...");
+
+	}
+
+	@GetMapping("/admin")
+	public void admin() {
+		log.info("GET /a...");
+
+	}
+
+	@GetMapping("/join")
+	public void join() {
+		log.info("GET /join..");
+	}
+
+	@PostMapping("/join")
+	public String join_post(@Valid UserDto dto, BindingResult bindingResult, Model model, RedirectAttributes redirectAttributes) {
+		log.info("POST /join.." + dto);
+
+		for (FieldError error : bindingResult.getFieldErrors()) {
+			log.info("Error Field : " + error.getField() + " Error Msg : " + error.getDefaultMessage());
+			model.addAttribute(error.getField(), error.getDefaultMessage());
+			return "join";
+		}
+		
+		boolean isJoin = userService.userJoin(dto);
+		if(isJoin) {
+			redirectAttributes.addFlashAttribute("message","회원가입 완료!"); //sessino 에 저장
+			return "redirect:/login";
+		}
+		else
+			return "join";
+
+	}
+
+	// WebDateBinder Custom설정
+	// 파라미터 중 phone의 값중 '-' 는 없애고 바인딩할것(010-111-2222 -> 0101112222)
+	// 파라미터 중 birthday의 ~은 -로 바꾼뒤 LocalDate 로 Outformatting 할것
+
+	private static class DateTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String birthdaytext) throws IllegalArgumentException {
+			log.info("DateTestEditor's setAsText invoke.." + birthdaytext);
+			LocalDate date = null;
+			if (birthdaytext.isEmpty()) {
+				date = LocalDate.now();
+			} else {
+				birthdaytext = birthdaytext.replaceAll("~", "-");
+				date = LocalDate.parse(birthdaytext, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+			}
+			setValue(date);
+
+		}
+
+	}
+
+	private static class phoneTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String phonetext) throws IllegalArgumentException {
+			log.info("phoneTestEditer's setAsText invoke.." + phonetext);
+			phonetext = phonetext.replaceAll("-", "");
+			setValue(phonetext);
+		}
+
+	}
+}
+
+
+--------------------------------
+UserController.java
+--------------------------------
+
+방법 3
+<<추가코드>>
+
+	@GetMapping("/user")
+	public void user(Model model) {
+		log.info("GET /user...");
+		Authentication authentication =
+		SecurityContextHolder.getContext().getAuthentication();
+		log.info("authentication : " + authentication);
+		
+		model.addAttribute("auth",authentication);
+		
+	}
+
+/user 접속시 콘솔에서 확인
+
+INFO : com.example.app.controller.UserController - GET /user...
+INFO : com.example.app.controller.UserController - authentication : org.springframework.security.authentication.UsernamePasswordAuthenticationToken@e0c87c21: Principal: PrincipalDetails(userDto=UserDto(username=user, password=$2a$10$aOIo1l8U6Mag6Xklsu1.Ye3pOV5AJvE431NLwX/.VWJjRdN3oJOuC, role=ROLE_USER)); Credentials: [PROTECTED]; Authenticated: true; Details: org.springframework.security.web.authentication.WebAuthenticationDetails@ffff4c9c: RemoteIpAddress: 0:0:0:0:0:0:0:1; SessionId: 4D62D4EEC4DA23F64CF6C02E59D9888F; Granted Authorities: ROLE_USER
+INFO : com.example.app.controller.UserController - MemoController's dataBinder ...org.springframework.web.servlet.mvc.method.annotation.ExtendedServletRequestDataBinder@236958d6
+
+
+
+<<전체코드>>
+
+package com.example.app.controller;
+
+import java.beans.PropertyEditorSupport;
+import java.security.Principal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+import javax.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.example.app.domain.dto.UserDto;
+import com.example.app.domain.service.UserServiceImpl;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Controller
+@Slf4j
+public class UserController {
+
+	@Autowired
+	private UserServiceImpl userService;
+
+	@InitBinder
+	public void dataBinder(WebDataBinder webDataBinder) {
+		log.info("MemoController's dataBinder ..." + webDataBinder);
+		webDataBinder.registerCustomEditor(LocalDate.class, "birthday", new DateTextEditor());
+		webDataBinder.registerCustomEditor(String.class, "phone", new phoneTextEditor());
+	}
+
+	@GetMapping("/login")
+	public void login() {
+		log.info("GET /login...");
+	}
+	
+//	@GetMapping("/user")
+//	public void user(Authentication authentication) {
+//		log.info("GET /user..." + authentication);
+//		log.info("name..." + authentication.getName());
+//		log.info("principal..." + authentication.getPrincipal());
+//		log.info("authorities..." + authentication.getAuthorities());
+//		log.info("details..." + authentication.getDetails());
+//		log.info("credentials..." + authentication.getCredentials());
+//	}
+	
+//	@GetMapping("/user")
+//	public void user(@AuthenticationPrincipal Principal principal) {
+//		log.info("GET /user..." + principal);
+//
+//	}
+	
+	@GetMapping("/user")
+	public void user(Model model) {
+		log.info("GET /user...");
+		Authentication authentication =
+		SecurityContextHolder.getContext().getAuthentication();
+		log.info("authentication : " + authentication);
+		
+		model.addAttribute("auth",authentication);
+		
+	}
+
+	@GetMapping("/manager")
+	public void manager() {
+		log.info("GET /manager...");
+
+	}
+
+	@GetMapping("/admin")
+	public void admin() {
+		log.info("GET /a...");
+
+	}
+
+	@GetMapping("/join")
+	public void join() {
+		log.info("GET /join..");
+	}
+
+	@PostMapping("/join")
+	public String join_post(@Valid UserDto dto, BindingResult bindingResult, Model model, RedirectAttributes redirectAttributes) {
+		log.info("POST /join.." + dto);
+
+		for (FieldError error : bindingResult.getFieldErrors()) {
+			log.info("Error Field : " + error.getField() + " Error Msg : " + error.getDefaultMessage());
+			model.addAttribute(error.getField(), error.getDefaultMessage());
+			return "join";
+		}
+		
+		boolean isJoin = userService.userJoin(dto);
+		if(isJoin) {
+			redirectAttributes.addFlashAttribute("message","회원가입 완료!"); //sessino 에 저장
+			return "redirect:/login";
+		}
+		else
+			return "join";
+
+	}
+
+	// WebDateBinder Custom설정
+	// 파라미터 중 phone의 값중 '-' 는 없애고 바인딩할것(010-111-2222 -> 0101112222)
+	// 파라미터 중 birthday의 ~은 -로 바꾼뒤 LocalDate 로 Outformatting 할것
+
+	private static class DateTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String birthdaytext) throws IllegalArgumentException {
+			log.info("DateTestEditor's setAsText invoke.." + birthdaytext);
+			LocalDate date = null;
+			if (birthdaytext.isEmpty()) {
+				date = LocalDate.now();
+			} else {
+				birthdaytext = birthdaytext.replaceAll("~", "-");
+				date = LocalDate.parse(birthdaytext, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+			}
+			setValue(date);
+
+		}
+
+	}
+
+	private static class phoneTextEditor extends PropertyEditorSupport {
+
+		@Override
+		public void setAsText(String phonetext) throws IllegalArgumentException {
+			log.info("phoneTestEditer's setAsText invoke.." + phonetext);
+			phonetext = phonetext.replaceAll("-", "");
+			setValue(phonetext);
+		}
+
+	}
+}
+
+
+------------------------
+tbl_user
+------------------------
+
+/join에서 manager 회원가입 해서 tbl_user에 추가
+
+tbl_user에
+username컬럼
+manager의 role 컬럼 ROLE_MANAGER로 변경해주기
+
+
+
+
+
+----------------------------
+manager.jsp
+----------------------------
+구글에 SPRING SECURITY TAGLIB 검색
+
+https://ysu96.tistory.com/11 들어가서
+2. JSP 파일에 태그 라이브러리 추가 부분에 있는 코드중
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags"%>
+복사해서 
+붙여넣기
+
+	<p>PRINCIPAL : <sec:authentication property="principal"/>  </p>
+	<p>USERDTO :   <sec:authentication property="principal.userDto"/>        </p>
+	<p>principal로 꺼낸 ID : <sec:authentication property="principal.username"/>  </p> <hr/>
+	<p>사용자의 이름 : <sec:authentication property="principal.userDto.username"/>  </p> <hr/>
+	<p>사용자의 아이디 : <sec:authentication property="principal.userDto.username"/>  </p> <hr/>
+	<p>사용자의 권한 목록 : <sec:authentication property="principal.userDto.role"/>  </p> <hr/>
+	<sec:authorize access="isAuthenticated()">
+		<p>로그인 사용자입니다.</p>
+	</sec:authorize>
+	<sec:authorize access="isAnonymous()">
+		<p>비로그인 사용자입니다. 로그인해주세요.</p>
+	</sec:authorize>
+
+
+
+<<전체코드>>
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8" isErrorPage="true"%>
+
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h1>MANAGER</h1>
+	
+	<p>PRINCIPAL : <sec:authentication property="principal"/>  </p>
+	<p>USERDTO :   <sec:authentication property="principal.userDto"/>        </p>
+	<p>principal로 꺼낸 ID : <sec:authentication property="principal.username"/>  </p> <hr/>
+	<p>사용자의 이름 : <sec:authentication property="principal.userDto.username"/>  </p> <hr/>
+	<p>사용자의 아이디 : <sec:authentication property="principal.userDto.username"/>  </p> <hr/>
+	<p>사용자의 권한 목록 : <sec:authentication property="principal.userDto.role"/>  </p> <hr/>
+	<sec:authorize access="isAuthenticated()">
+		<p>로그인 사용자입니다.</p>
+	</sec:authorize>
+	<sec:authorize access="isAnonymous()">
+		<p>비로그인 사용자입니다. 로그인해주세요.</p>
+	</sec:authorize>
+	
+	<a href="${pageContext.request.contextPath }/logout">로그아웃</a>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-----------------------------------------------
+SECURITY 추가핸들러 진도 시작
+-----------------------------------------------
+
+
+---------------------------
+SecurityConfig.java 미인증 계정 예외처리
+---------------------------
+
+<<추가코드>>
+//예외처리
+		http.exceptionHandling()
+			.authenticationEntryPoint(new CustomAuthenticationEntryPoint());		//미인증 계정 예외처리
+
+
+
+<<전체코드>>
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.example.app.config.auth.PrincipalDetailsService;
+import com.example.app.config.auth.exceptionHandler.CustomAuthenticationEntryPoint;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private PrincipalDetailsService principalDetailsService;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+//		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+		http.exceptionHandling()
+			.authenticationEntryPoint(new CustomAuthenticationEntryPoint());		//미인증 계정 예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//		auth.inMemoryAuthentication()
+//			.withUser("user")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("USER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("manager")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("MANAGER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("admin")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("ADMIN");
+		
+		auth.userDetailsService(principalDetailsService).passwordEncoder(passwordEncoder);
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+---------------------------
+SecurityConfig.java
+---------------------------
+/ex14_springSecurity/src/main/java/com/example/app/config/auth/exceptionHandler/CustomAuthenticationEntryPoint.java
+
+package com.example.app.config.auth.exceptionHandler;
+
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.AuthenticationEntryPoint;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
+	@Override
+	public void commence(HttpServletRequest request, HttpServletResponse response,
+			AuthenticationException authException) throws IOException, ServletException {
+
+		log.error("CustomAuthenticationEntryPoint's commence invoke....");
+
+
+	}
+
+}
+
+
+실행 후 
+http://localhost:8090/app/user 접속 시도
+콘솔에 에러 내용 확인
+ERROR: com.example.app.config.auth.exceptionHandler.CustomAuthenticationEntryPoint - CustomAuthenticationEntryPoint's commence invoke....
+
+
+
+---------------------------
+SecurityConfig.java
+---------------------------
+
+package com.example.app.config.auth.exceptionHandler;
+
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.AuthenticationEntryPoint;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
+
+	@Override
+	public void commence(HttpServletRequest request, HttpServletResponse response,
+			AuthenticationException authException) throws IOException, ServletException {
+
+		log.error("CustomAuthenticationEntryPoint's commence invoke....");
+		response.sendRedirect(request.getContextPath()+"/login?error=" + authException.getMessage()); 
+
+	}
+
+}
+
+
+response.sendRedirect(request.getContextPath()+"/login?error=" + authException.getMessage()); //리다이렉션한 횟수가 너무 많습니다. 에러 발생
+
+SecurityConfig.java에
+<<"/login" >> 추가해주면 
+//리다이렉션한 횟수가 너무 많습니다. 에러 발생 
+에러 해결
+.antMatchers("/","/join", "/login").permitAll()
+
+
+---------------------------
+SecurityConfig.java
+---------------------------
+<<"/login" >> 추가해주면 
+//리다이렉션한 횟수가 너무 많습니다. 에러 발생 
+에러 해결
+.antMatchers("/","/join", "/login").permitAll()
+
+
+<<전체코드>>
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.example.app.config.auth.PrincipalDetailsService;
+import com.example.app.config.auth.exceptionHandler.CustomAuthenticationEntryPoint;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private PrincipalDetailsService principalDetailsService;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+//		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join", "/login").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+		http.exceptionHandling()
+			.authenticationEntryPoint(new CustomAuthenticationEntryPoint());		//미인증 계정 예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//		auth.inMemoryAuthentication()
+//			.withUser("user")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("USER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("manager")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("MANAGER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("admin")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("ADMIN");
+		
+		auth.userDetailsService(principalDetailsService).passwordEncoder(passwordEncoder);
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+---------------------------
+login.jsp 메시지 추가
+---------------------------
+<<메시지 추가>>
+${param.error}
+
+
+<<코드>>
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8" isErrorPage="true"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h1>LOGIN</h1>
+	<form action="${pageContext.request.contextPath}/login" method="post">
+		USERNAME : <input name="username" /><br>
+		PASSWORD : <input name="password" type="password" /><br>
+		<button>로그인</button>
+		<%-- <input type="hidden" name="_csrf" value="${_csrf.token }" /> --%>
+	</form>
+	${message}
+	${param.error}
+	
+</body>
+</html>
+
+
+
+
+
+
+
+---------------------------
+SecurityConfig.java   권한 부족시 예외처리
+---------------------------
+
+
+<<추가코드>>
+.accessDeniedHandler(new CustomAccessDeniedHandler()); //권한 부족시 예외처리
+
+
+
+<<전체코드>>
+
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.example.app.config.auth.PrincipalDetailsService;
+import com.example.app.config.auth.exceptionHandler.CustomAuthenticationEntryPoint;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private PrincipalDetailsService principalDetailsService;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+//		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join", "/login").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll();
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+		http.exceptionHandling()
+			.authenticationEntryPoint(new CustomAuthenticationEntryPoint())		//미인증 계정 예외처리
+			.accessDeniedHandler(new CustomAccessDeniedHandler());				//권한 부족시 예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//		auth.inMemoryAuthentication()
+//			.withUser("user")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("USER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("manager")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("MANAGER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("admin")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("ADMIN");
+		
+		auth.userDetailsService(principalDetailsService).passwordEncoder(passwordEncoder);
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+
+---------------------------
+CustomAccessDeniedHandler.java
+---------------------------
+/ex14_springSecurity/src/main/java/com/example/app/config/auth/exceptionHandler/CustomAccessDeniedHandler.java
+
+
+
+
+package com.example.app.config.auth.exceptionHandler;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class CustomAccessDeniedHandler implements AccessDeniedHandler {
+
+	@Override
+	public void handle(HttpServletRequest request, HttpServletResponse response,
+			AccessDeniedException accessDeniedException) throws IOException, ServletException {
+		log.error("CustomAccessDeniedHandler's handle invoke..");
+
+	}
+
+}
+
+
+실행 하고 user계정으로 로그인
+http://localhost:8090/app/admin에 접속 시도
+
+콘솔에 에러 로그 확인
+ERROR: com.example.app.config.auth.exceptionHandler.CustomAccessDeniedHandler - CustomAccessDeniedHandler's handle invoke..
+
+
+
+
+
+---------------------------
+CustomAccessDeniedHandler.java
+---------------------------
+
+<<추가코드>>
+response.sendRedirect(request.getContextPath()+"/login?error="+accessDeniedException.getMessage());
+추가후 user계정 로그인 후 
+http://localhost:8090/app/admin 접속 시도시 
+
+리다이렉트됨.
+<<전체코드>>
+package com.example.app.config.auth.exceptionHandler;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class CustomAccessDeniedHandler implements AccessDeniedHandler {
+
+	@Override
+	public void handle(HttpServletRequest request, HttpServletResponse response,
+			AccessDeniedException accessDeniedException) throws IOException, ServletException {
+		log.error("CustomAccessDeniedHandler's handle invoke..");
+		response.sendRedirect(request.getContextPath()+"/login?error="+accessDeniedException.getMessage());
+	}
+
+}
+
+
+
+
+
+---------------------------
+SecurityConfig.java
+---------------------------
+
+
+<<추가코드>>
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll()
+			.successHandler(new CustomLoginSuccessHandler());
+
+
+<<전체코드>>
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.example.app.config.auth.PrincipalDetailsService;
+import com.example.app.config.auth.exceptionHandler.CustomAccessDeniedHandler;
+import com.example.app.config.auth.exceptionHandler.CustomAuthenticationEntryPoint;
+import com.example.app.config.auth.loginHandler.CustomLoginSuccessHandler;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private PrincipalDetailsService principalDetailsService;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+//		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join", "/login").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll()
+			.successHandler(new CustomLoginSuccessHandler());
+				
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+		http.exceptionHandling()
+			.authenticationEntryPoint(new CustomAuthenticationEntryPoint())		//미인증 계정 예외처리
+			.accessDeniedHandler(new CustomAccessDeniedHandler());				//권한 부족시 예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//		auth.inMemoryAuthentication()
+//			.withUser("user")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("USER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("manager")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("MANAGER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("admin")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("ADMIN");
+		
+		auth.userDetailsService(principalDetailsService).passwordEncoder(passwordEncoder);
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+---------------------------
+CustomLoginSuccessHandler.java
+---------------------------
+
+/ex14_springSecurity/src/main/java/com/example/app/config/auth/loginHandler/CustomLoginSuccessHandler.java
+
+package com.example.app.config.auth.loginHandler;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
+
+	@Override
+	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+			Authentication authentication) throws IOException, ServletException {
+		
+		log.info("CustomLoginSuccessHandler's onAuthenticationSuccess invoke...");
+		
+		response.sendRedirect(request.getContextPath()+"/");
+
+	}
+
+}
+
+
+로그인 성공 시 request.getContextPath()+"/" 으로 리다이렉트 (home.jsp)
+
+
+
+---------------------------
+SecurityConfig.java
+---------------------------
+<<추가코드>>
+실패시 핸들러
+.failureHandler(new CustomLoginFailureHandler());
+
+
+<<전체코드>>
+
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.example.app.config.auth.PrincipalDetailsService;
+import com.example.app.config.auth.exceptionHandler.CustomAccessDeniedHandler;
+import com.example.app.config.auth.exceptionHandler.CustomAuthenticationEntryPoint;
+import com.example.app.config.auth.loginHandler.CustomLoginFailureHandler;
+import com.example.app.config.auth.loginHandler.CustomLoginSuccessHandler;
+
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private PrincipalDetailsService principalDetailsService;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+//		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join", "/login").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll()
+			.successHandler(new CustomLoginSuccessHandler())
+			.failureHandler(new CustomLoginFailureHandler()); //
+				
+		//로그아웃
+		http.logout()
+			.permitAll();
+		
+		//예외처리
+		http.exceptionHandling()
+			.authenticationEntryPoint(new CustomAuthenticationEntryPoint())		//미인증 계정 예외처리
+			.accessDeniedHandler(new CustomAccessDeniedHandler());				//권한 부족시 예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//		auth.inMemoryAuthentication()
+//			.withUser("user")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("USER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("manager")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("MANAGER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("admin")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("ADMIN");
+		
+		auth.userDetailsService(principalDetailsService).passwordEncoder(passwordEncoder);
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+
+---------------------------
+CustomLoginFailureHandler.java
+---------------------------
+/ex14_springSecurity/src/main/java/com/example/app/config/auth/loginHandler/CustomLoginFailureHandler.java
+
+
+
+
+package com.example.app.config.auth.loginHandler;
+
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class CustomLoginFailureHandler implements AuthenticationFailureHandler {
+
+	@Override
+	public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
+			AuthenticationException exception) throws IOException, ServletException {
+		
+		log.error("CustomLoginFailureHandler's onAuthenticationFailure invoke..");
+		response.sendRedirect(request.getContextPath()+"/login?error=" + exception.getMessage());
+
+
+	}
+
+}
+
+
+
+
+
+실행 후 login 
+username , password 틀리게 적고 로그인 시도
+실패 -> 리다이렉트
+
+response.sendRedirect(request.getContextPath()+"/login?error=" + exception.getMessage());
+
+
+
+
+
+---------------------------
+SecurityConfig.java
+---------------------------
+
+<<추가코드>>
+.addLogoutHandler(new CustomLogoutHandler())
+
+
+<<전체코드
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.example.app.config.auth.PrincipalDetailsService;
+import com.example.app.config.auth.exceptionHandler.CustomAccessDeniedHandler;
+import com.example.app.config.auth.exceptionHandler.CustomAuthenticationEntryPoint;
+import com.example.app.config.auth.loginHandler.CustomLoginFailureHandler;
+import com.example.app.config.auth.loginHandler.CustomLoginSuccessHandler;
+
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private PrincipalDetailsService principalDetailsService;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+//		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join", "/login").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll()
+			.successHandler(new CustomLoginSuccessHandler())
+			.failureHandler(new CustomLoginFailureHandler()); //
+				
+		//로그아웃
+		http.logout()
+			.permitAll()
+			.addLogoutHandler(new CustomLogoutHandler())
+		
+		//예외처리
+		http.exceptionHandling()
+			.authenticationEntryPoint(new CustomAuthenticationEntryPoint())		//미인증 계정 예외처리
+			.accessDeniedHandler(new CustomAccessDeniedHandler());				//권한 부족시 예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//		auth.inMemoryAuthentication()
+//			.withUser("user")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("USER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("manager")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("MANAGER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("admin")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("ADMIN");
+		
+		auth.userDetailsService(principalDetailsService).passwordEncoder(passwordEncoder);
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+
+
+---------------------------
+CustomLogoutHandler.java
+---------------------------
+
+/ex14_springSecurity/src/main/java/com/example/app/config/auth/logoutHandler/CustomLogoutHandler.java
+
+
+
+package com.example.app.config.auth.logoutHandler;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class CustomLogoutHandler implements LogoutHandler {
+
+	@Override
+	public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+		// TODO Auto-generated method stub
+		log.info("CustomLogoutHandler's logout invoke...");
+		
+		HttpSession session = request.getSession();
+		if(session!=null)
+			session.invalidate();
+
+	}
+
+}
+
+실행 하고 로그인 후 로그아웃 하면 콘솔에서 로그 확인됨.
+INFO : com.example.app.config.auth.logoutHandler.CustomLogoutHandler - CustomLogoutHandler's logout invoke...
+INFO : com.example.app.controller.UserController - GET /login...
+
+
+
+
+---------------------------
+SecurityConfig.java
+---------------------------
+<<추가코드>>
+.logoutSuccessHandler(new CustomLogoutSuccessHandler());
+
+
+
+<<전체코드>>
+
+package com.example.app.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.example.app.config.auth.PrincipalDetailsService;
+import com.example.app.config.auth.exceptionHandler.CustomAccessDeniedHandler;
+import com.example.app.config.auth.exceptionHandler.CustomAuthenticationEntryPoint;
+import com.example.app.config.auth.loginHandler.CustomLoginFailureHandler;
+import com.example.app.config.auth.loginHandler.CustomLoginSuccessHandler;
+import com.example.app.config.auth.logoutHandler.CustomLogoutHandler;
+
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig extends WebSecurityConfigurerAdapter {
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	@Autowired
+	private PrincipalDetailsService principalDetailsService;
+
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+
+		//CSRF비활성화
+		http.csrf().disable();	//+CSRF토큰값확인 x , GET /logout 처리 가능
+		
+		//CSRF토큰 쿠키형태로 전달
+//		http.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
+		
+		//권한체크
+		http.authorizeRequests()
+			.antMatchers("/","/join", "/login").permitAll()
+			.antMatchers("/user").hasRole("USER")
+			.antMatchers("/manager").hasRole("MANAGER")
+			.antMatchers("/admin").hasRole("ADMIN")
+			.anyRequest()
+//			.permitAll();	// 위의 경로에 누구나 접근 가능
+			.authenticated();   //어떤 접근이든 authenticated()가 필요하다.
+		
+		//로그인
+		http.formLogin()
+			.loginPage("/login")
+			.permitAll()
+			.successHandler(new CustomLoginSuccessHandler())
+			.failureHandler(new CustomLoginFailureHandler()); //
+				
+		//로그아웃
+		http.logout()
+			.permitAll()
+			.addLogoutHandler(new CustomLogoutHandler())
+			.logoutSuccessHandler(new CustomLogoutSuccessHandler());
+		
+		//예외처리
+		http.exceptionHandling()
+			.authenticationEntryPoint(new CustomAuthenticationEntryPoint())		//미인증 계정 예외처리
+			.accessDeniedHandler(new CustomAccessDeniedHandler());				//권한 부족시 예외처리
+	}
+
+	@Override
+	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+//		auth.inMemoryAuthentication()
+//			.withUser("user")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("USER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("manager")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("MANAGER");
+//		
+//		auth.inMemoryAuthentication()
+//			.withUser("admin")
+//			.password(passwordEncoder.encode("1234"))
+//			.roles("ADMIN");
+		
+		auth.userDetailsService(principalDetailsService).passwordEncoder(passwordEncoder);
+	}
+	
+	@Bean
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	
+}
+
+
+
+---------------------------
+CustomLogoutSuccessHandler.java
+---------------------------
+/ex14_springSecurity/src/main/java/com/example/app/config/auth/logoutHandler/CustomLogoutSuccessHandler.java
+
+package com.example.app.config.auth.logoutHandler;
+
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class CustomLogoutSuccessHandler implements LogoutSuccessHandler {
+
+	@Override
+	public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
+			throws IOException, ServletException {
+
+		log.info("CustomLogoutSuccessHandler onLogoutSuccess invoke...");
+		response.sendRedirect(request.getContextPath()+"/");
+		
+	}
+
+}
+
+
+
+
+
+
+
+
+-----------------------------------
+SECURITY REMEMBER_ME  공부 시작
+-----------------------------------
+
+
+-------------------------------
+login.jsp
+-------------------------------
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8" isErrorPage="true"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h1>LOGIN</h1>
+	<form action="${pageContext.request.contextPath}/login" method="post">
+		<div>
+			<label>USERNAME : </label>
+			<input name="username" /><br>
+		</div>
+		<div>
+			<label>PASSWORD : </label>
+			<input name="password" type="password" /><br>
+		</div>
+		<div>
+			<input type="checkbox" name="remember-me" id="remember-me" />
+			<label for="remember-me"> 로그인 상태를 유지</label>
+		</div>
+		<button>로그인</button>
+		<%-- <input type="hidden" name="_csrf" value="${_csrf.token }" /> --%>
+	</form>
+	${message}
+	${param.error}
+	
+</body>
+</html>
+
+
+
+-------------------------------
+SecurityConfig.java
+-------------------------------
+
+<<추가코드>>
+	tokenRepository()을 사용 하기 위해선 dataSource가 필요하다. 	HikariCP DataSource가 조합이 좋아서 dataSwource3사용
+
+	@Autowired
+	private DataSource dataSource3;
+
+
+		//REMEMBER-ME
+		http.rememberMe()
+			.key("rememberMekey")
+			.rememberMeParameter("remember-me") //login.jsp 의 name="remember-me" 과 같아야함.
+			.alwaysRemember(false) //항상 리맴버하지 말라고 false
+			.tokenValiditySeconds(60*60) //토큰 유지 시간
+			.tokenRepository(tokenRepository());		 //토큰 저장할 레포지토리
+
+
+	@Bean
+	public PersistentTokenRepository tokenRepository() {
+		JdbcTokenRepositoryImpl repo = new JdbcTokenRepositoryImpl();
+		repo.setDataSource(dataSource3);
+		
+		return repo;
+	}
+	
+
+<<전체코드>>
+
+
+
+
+
+
+
+
+-------------------------------
+DataSourceConfig.java
+-------------------------------
+/ex14_springSecurity/src/main/java/com/example/app/config/DataSourceConfig.java
+
+
+package com.example.app.config;
+
+import javax.sql.DataSource;
+
+import org.apache.commons.dbcp2.BasicDataSource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import com.zaxxer.hikari.HikariDataSource;
+
+@Configuration
+public class DataSourceConfig {
+	// Spring-jdbc DataSource
+	@Bean
+	public DataSource dataSource2() {
+//		DriverManagerDataSource dataSource = new DriverManagerDataSource();
+		BasicDataSource dataSource = new BasicDataSource();
+		dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+		dataSource.setUrl("jdbc:mysql://localhost:3306/testdb");
+		dataSource.setUsername("root");
+		dataSource.setPassword("1234");
+
+		dataSource.setInitialSize(5); // 초기 연결개수
+		dataSource.setMaxTotal(10); // 최대 연결 개수
+		dataSource.setMaxIdle(8); // 최대 유휴(쉬어도되는) 연결 수
+		dataSource.setMinIdle(3); // 최소 유휴(쉬어도되는) 연결 수
+
+		return dataSource;
+	}
+
+//	HikariCP DataSource
+	@Bean
+	public HikariDataSource dataSource3() {
+		HikariDataSource dataSource = new HikariDataSource();
+		dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+		dataSource.setJdbcUrl("jdbc:mysql://localhost:3306/testdb");
+		dataSource.setUsername("root");
+		dataSource.setPassword("1234");
+
+		return dataSource;
+	}
+
+}
+
+
+
+
+
+
+---------------------------
+JdbcTokenRepositoryImpl
+---------------------------
+
+	@Bean
+	public PersistentTokenRepository tokenRepository() {
+		JdbcTokenRepositoryImpl repo = new JdbcTokenRepositoryImpl();
+		repo.setDataSource(dataSource3);
+		
+		return repo;
+	}
+
+JdbcTokenRepositoryImpl Ctrl + 마우스좌클릭해서 이동
+
+
+public class JdbcTokenRepositoryImpl extends JdbcDaoSupport implements
+		PersistentTokenRepository {
+	// ~ Static fields/initializers
+	// =====================================================================================
+
+/** Default SQL for creating the database table to store the tokens */
+	public static final String CREATE_TABLE_SQL = "create table persistent_logins (username varchar(64) not null, series varchar(64) primary key, "
+			+ "token varchar(64) not null, last_used timestamp not null)";
+	/** The default SQL used by the <tt>getTokenBySeries</tt> query */
+	public static final String DEF_TOKEN_BY_SERIES_SQL = "select username,series,token,last_used from persistent_logins where series = ?";
+	/** The default SQL used by <tt>createNewToken</tt> */
+	public static final String DEF_INSERT_TOKEN_SQL = "insert into persistent_logins (username, series, token, last_used) values(?,?,?,?)";
+	/** The default SQL used by <tt>updateToken</tt> */
+	public static final String DEF_UPDATE_TOKEN_SQL = "update persistent_logins set token = ?, last_used = ? where series = ?";
+	/** The default SQL used by <tt>removeUserTokens</tt> */
+	public static final String DEF_REMOVE_USER_TOKENS_SQL = "delete from persistent_logins where username = ?";
+
+
+
+---
+	/** Default SQL for creating the database table to store the tokens */
+	public static final String CREATE_TABLE_SQL = "create table persistent_logins (username varchar(64) not null, series varchar(64) primary key, "
+			+ "token varchar(64) not null, last_used timestamp not null)";
+CREATE_TABLE_SQL쿼리 문 복사 해서 Mysql workben에 붙여넣어서
+create table persistent_logins (username varchar(64) not null, series varchar(64) primary key, token varchar(64) not null, last_used timestamp not null);
+실행하기.
+
+persistent_logins 태이블 생성 된거 확인.
+
+
+
+
+
+
+
+-----------------------
+user.jsp   
+-----------------------
+<div>auth : ${auth}</div> 확인추가.
+
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8" isErrorPage="true"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h1>USER</h1>
+	<div>auth : ${auth}</div>
+	<a href="${pageContext.request.contextPath }/logout">로그아웃</a>
+</body>
+</html>
+
+
+
+
+---------------------------
+
+
+실행하고 로그인 상태를 유지 체크 한 상태로 user로그인 
+persistent_logins 태이블에 행 생성 확인.
+username series				token				last_used
+user	RbV5iwg5iNGRzzW/IVvGdw==	k0QVx9ON0/+kBCYat9PYZQ==	2025-04-30 17:20:21
+
+톰캣 서버 종료 후 다시 project 실행
+http://localhost:8090/app/user 접속
+로그인 상태 유지돼있음.
+
+로그아웃 하면
+persistent_logins 태이블의 행 사라짐.

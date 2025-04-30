@@ -1,0 +1,138 @@
+1. Interceptor란?
+   스프링 MVC 요청 처리 흐름에 개입할 수 있는 가로채기(Interceptor) 기능
+   컨트롤러 실행 전, 실행 후, 뷰 렌더링 후에도 개입 가능
+   서브컨트롤러별 필터라고 보면됨
+
+
+preHandle()	컨트롤러 호출 전에 실행 (핵심)
+postHandle()	컨트롤러 실행 후, 뷰 렌더링 전에 실행
+afterCompletion()	뷰 렌더링 완료 후 실행 (리소스 정리 등)
+
+
+
+
+
+
+
+------------------------------
+MemoInterceptor.java
+------------------------------
+/ex10_interceptor/src/main/java/com/example/app/interceptor/MemoInterceptor.java
+
+package com.example.app.interceptor;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+
+public class MemoInterceptor implements HandlerInterceptor {
+
+	//MemoController로 이동하기 전 처리  = 서브컨트롤러 진입전
+	@Override
+	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+			throws Exception {
+		System.out.println("MemoInterceptior's preHandle...");
+		return true;
+	}
+	
+	//MemoController의 작업이 끝난 이후  = 서브컨트롤러 진입후
+	@Override
+	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+			ModelAndView modelAndView) throws Exception {
+		System.out.println("MemoInterceptior's postHandle...");
+
+	}
+
+	//View Page 렌더링 된 이후 처리
+	@Override
+	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
+			throws Exception {
+		System.out.println("MemoInterceptior's afterCompletion...");
+
+	}
+
+	
+}
+
+
+------------------------------
+WebMvcConfig.java   인터셉터 추가
+------------------------------
+/ex10_interceptor/src/main/java/com/example/app/config/WebMvcConfig.java
+
+package com.example.app.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.ComponentScans;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.multipart.MultipartResolver;
+import org.springframework.web.multipart.commons.CommonsMultipartResolver;
+import org.springframework.web.servlet.ViewResolver;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.view.InternalResourceViewResolver;
+
+import com.example.app.interceptor.MemoInterceptor;
+
+@Configuration
+@EnableWebMvc  //servlet-context.xml의 역할을 대신해서 함. 스프링 MVC 설정을 자바 기반(@Configuration)으로 활성화하는 어노테이션
+@ComponentScans({
+	@ComponentScan("com.example.app.controller"),
+	@ComponentScan("com.example.app.restController")
+})
+public class WebMvcConfig implements WebMvcConfigurer{  //servlet-context.xml의 역할을 대신해서 함.
+
+	@Bean
+	public MultipartResolver multipartResolver() { 
+        CommonsMultipartResolver multipartResolver = new CommonsMultipartResolver();
+        multipartResolver.setMaxUploadSize(20971520); 			// 20MB	//전체 업로드 허용 사이즈
+        multipartResolver.setMaxUploadSizePerFile(20971520); 	// 20MB	//파일 1개당 허용가능한 업로드 사이즈
+        multipartResolver.setMaxInMemorySize(20971520); 		// 20MB //캐시 공간
+        return multipartResolver;
+	}
+	
+	
+
+	
+	//ViewResolver
+	@Bean
+	public ViewResolver viewResolver() {
+		InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+		viewResolver.setPrefix("/WEB-INF/views/");
+		viewResolver.setSuffix(".jsp");
+		return viewResolver;
+	}
+	
+	
+	@Override
+	public void addResourceHandlers(ResourceHandlerRegistry registry) {
+		//정적파일설정할때 페이지에서 나오는 기본아이콘 (파비콘) 설정할때 중요
+		registry.addResourceHandler("/resources/**").addResourceLocations("/resources/");
+		
+	}
+	
+	//INTERCEPTOR ADD
+	@Override
+	public void addInterceptors(InterceptorRegistry registry) {
+		registry.addInterceptor(new MemoInterceptor()).addPathPatterns("/memo/*");
+	}
+
+		
+	
+}
+
+
+
+실행 후 
+http://localhost:8090/app/memo/add 접속시
+
+콘솔에서 확인
+MemoInterceptior's preHandle...
+INFO : com.example.app.controller.MemoController - GET /memo/add...
+MemoInterceptior's postHandle...
+MemoInterceptior's afterCompletion...

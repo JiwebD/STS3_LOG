@@ -1,0 +1,194 @@
+view로 실습
+
+
+restController
+
+내가 정리내용 보여달라고 할때만 보여주고 안물어보면 정리해놓고있어줘
+sts @RestController 공부 시작
+
+@Controller , @RestController  비교 참고 사이트 참고해서 정리해주면 좋겠어
+https://velog.io/@dyunge_100/Spring-Controller%EC%99%80-RestController%EC%9D%98-%EC%B0%A8%EC%9D%B4
+
+
+
+@RestController(BACKEND-SPRING)
+RESTful 웹 서비스를 제공하는 컨트롤러
+	REST : REpresentative State Transfer의 약자로 분산 시스템을 위한 아키텍처
+	네트워크를 경유해서 외부 서버에 접속하거나 필요한 정보를 불러오기 위한 구조
+	그리고 이 REST 개념을 바탕으로 설계된 시스템을 'RESTFul'이라고 표현
+메서드의 반환 값이 JSON, XML 등과 같은 데이터로 처리
+@Controller + @ResponseBody 형태
+
+
+비동기요청함수(FRONTEND-JAVASCRIPT)
+종류
+XMLHttpRequest (XHR):
+  연도: 1999년
+  설명: Microsoft의 인터넷 익스플로러 5에서 처음 등장한 기술로, 웹 페이지에서 비동기적으로 데이터를 받아오는 데 사용됩니다.
+Promise:
+  연도: 2015년 (ECMAScript 2015, 일명 ES6)
+  설명: Promise는 비동기 작업의 결과를 다루기 위한 객체로, 콜백 헬(callback hell)을 해결하고 코드를 보다 깔끔하게 작성할 수 있도록 도와줍니다.
+Fetch API:
+  연도: 2015년 (ECMAScript 2015, 일명 ES6)
+  설명: Fetch API는 네트워크 요청을 생성 및 조작하기 위한 간단한 인터페이스를 제공합니다. XHR보다 더 간결하고 유연한 API를 제공하며 Promise를 사용하여 비동기 작업을 처리합니다.
+Axios:
+  연도: 2014년
+  설명: Axios는 HTTP 클라이언트 라이브러리로, 브라우저 및 Node.js 환경에서 모두 사용할 수 있습니다. Promise 기반의 API를 제공하며,
+  특히 간편한 인터셉터(interceptors), CSRF 보호, JSON 데이터 자동 직렬화 등을 제공하여 개발자들에게 매우 편리한 HTTP 요청 처리 방법을 제공합니다.
+
+
+
+---------------------------------------
+의존성 pom.xml
+---------------------------------------
+maven repository에서 jackson검색
+
+Jackson Databind » 2.19.0
+
+pom.xml에 붙여넣기
+
+<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
+<dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>
+    <artifactId>jackson-databind</artifactId>
+    <version>2.19.0</version>
+</dependency>
+
+
+Jackson Dataformat XML » 2.19.0
+
+pom.xml에 붙여넣기
+
+<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.dataformat/jackson-dataformat-xml -->
+<dependency>
+    <groupId>com.fasterxml.jackson.dataformat</groupId>
+    <artifactId>jackson-dataformat-xml</artifactId>
+    <version>2.19.0</version>
+</dependency>
+
+
+
+Jackson Datatype: JSR310 » 2.19.0   이거 설치안하면 데이터타입 에러남 LocaldateTime같은애들
+
+pom.xml에 붙여넣기
+
+<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310 -->
+<dependency>
+    <groupId>com.fasterxml.jackson.datatype</groupId>
+    <artifactId>jackson-datatype-jsr310</artifactId>
+    <version>2.19.0</version>
+</dependency>
+
+
+Update Project 하기
+
+
+
+
+
+실행 후 
+
+http://localhost:8090/app/home/test 
+
+{"message":"REST DATA TEST"}
+
+Network에서
+Response Headers
+content-type:
+text/html;charset=ISO-8859-1
+확인
+
+
+
+
+
+
+--------------------------------------
+MemoRestController.java
+--------------------------------------
+/ex08_restController/src/main/java/com/example/app/restController/MemoRestController.java
+
+
+package com.example.app.restController;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.app.domain.dto.MemoDto;
+import com.example.app.domain.service.MemoServiceImpl;
+
+import lombok.extern.slf4j.Slf4j;
+
+@RestController
+@Slf4j
+@RequestMapping("/rest/memo")
+public class MemoRestController {
+
+	@Autowired
+	private MemoServiceImpl memoService;
+
+	// 메모확인전체
+	@GetMapping(value = "/getAll", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+	public List<MemoDto> getAll() {
+		log.info("GET /rest/memo/getAll");
+		return memoService.getAllMemo();
+	}
+
+	// 메모확인(단건)
+	@GetMapping(value = "/get/{id}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+	public ResponseEntity<MemoDto> get(@PathVariable int id) {
+		log.info("GET /memo/get... " + id);
+		
+		MemoDto dto = memoService.getMemo(id);
+		if (dto == null) {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+			}
+			return new ResponseEntity<>(dto, HttpStatus.OK);
+	}
+
+	// 메모쓰기
+	@PostMapping("/post") // http://localhost:8090/app/rest/memo/post
+	public void add(@RequestBody MemoDto dto) throws SQLException {
+		log.info("POST /memo/add_rest_post.." + dto);
+		memoService.registrationMemo(dto);
+	}
+	
+	//메모수정
+	@PutMapping("/put/{id}/{text}")
+	public void put(MemoDto dto) {
+		log.info("PUT /memo/put.."+dto);
+		memoService.modifyMemo(dto);
+	}
+	
+	@PutMapping("/put2")	//http://localhost:8080/app/memo/put2
+	public void put2(@RequestBody MemoDto dto) {
+		log.info("PUT /memo/put2.."+dto);
+		memoService.modifyMemo(dto);
+	}
+	
+	@PatchMapping("/patch/{id}/{text}")
+	public void patch(MemoDto dto) {
+		log.info("PATCH /memo/patch.."+dto);
+	}
+	//메모삭제
+	@DeleteMapping("/remove/{id}")	//http://localhost:8080/app/memo/remove/{id}
+	public void remove(@PathVariable int id) {
+		log.info("DELETE /memo/remove.."+id);
+		memoService.removeMemo(id);
+	}
+}
+
+
+
+
+
+
